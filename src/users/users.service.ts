@@ -1,29 +1,44 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { User } from './user.entity';
-import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
-  constructor(
-    @InjectRepository(User)
-    private userRepo: Repository<User>,
-  ) {}
+  private users = [
+    {
+      id: 1,
+      username: 'mamis',
+      password: bcrypt.hashSync('1234', 10),
+    },
+  ];
 
-  async register(email: string, password: string) {
-    const hashed = await bcrypt.hash(password, 10);
-    const user = this.userRepo.create({ email, password: hashed });
-    return this.userRepo.save(user);
+  async findByUsername(username: string) {
+    return this.users.find(user => user.username === username);
   }
 
-  async login(email: string, password: string) {
-    const user = await this.userRepo.findOneBy({ email });
+  async register(username: string, password: string) {
+    const existing = await this.findByUsername(username);
+    if (existing) {
+      return { success: false, message: 'kullanici zaten var' };
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = {
+      id: Date.now(),
+      username,
+      password: hashedPassword,
+    };
+    this.users.push(newUser);
+
+    return { success: true, user: { id: newUser.id, username: newUser.username } };
+  }
+
+  async login(username: string, password: string) {
+    const user = await this.findByUsername(username);
     if (!user) return null;
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return null;
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) return null;
 
-    return user;
+    return { id: user.id, username: user.username };
   }
 }

@@ -3,18 +3,18 @@ import { UsersService } from './users.service';
 
 @Controller('auth')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   @Post('register')
-  register(@Body() body: { email: string; password: string }) {
-    return this.usersService.register(body.email, body.password);
+  register(@Body() body: { username: string; password: string }) {
+    return this.usersService.register(body.username, body.password);
   }
 
   @Post('login')
-  async login(@Body() body: { email: string; password: string }) {
-    const user = await this.usersService.login(body.email, body.password);
+  async login(@Body() body: { username: string; password: string }) {
+    const user = await this.usersService.login(body.username, body.password);
     if (!user) {
-      return { success: false, message: 'Invalid credentials' };
+      return { success: false, message: 'bilinmeyen' };
     }
     return { success: true, user };
   }
