@@ -4,6 +4,7 @@ import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
 
 @Module({
+  // DI
   providers: [AuthService],
   imports: [UsersModule],
   controllers: [AuthController]

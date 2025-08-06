@@ -10,6 +10,7 @@ export class UsersService {
       password: bcrypt.hashSync('1234', 10),
     },
   ];
+  private currentId = 2;
 
   async findByUsername(username: string) {
     return this.users.find(user => user.username === username);
@@ -23,7 +24,7 @@ export class UsersService {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = {
-      id: Date.now(),
+      id: this.currentId++,
       username,
       password: hashedPassword,
     };
@@ -34,10 +35,14 @@ export class UsersService {
 
   async login(username: string, password: string) {
     const user = await this.findByUsername(username);
-    if (!user) return null;
+    if (!user) {
+      return null;
+    }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) return null;
+    if (!isPasswordValid) {
+      return null;
+    }
 
     return { id: user.id, username: user.username };
   }

@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 
 @Controller('auth')
 export class AuthController {
+  //DI
   constructor(private authService: AuthService) {}
 
   @Post('login')

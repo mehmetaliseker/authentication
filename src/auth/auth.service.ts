@@ -4,6 +4,7 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
+  // DI
   constructor(private userService: UsersService) {}
 
   async login(username: string, password: string) {
