@@ -5,10 +5,7 @@ import * as bcrypt from 'bcrypt';
 interface User {
   id: number;
   username: string;
-  email: string;
   password: string;
-  firstName: string;
-  lastName: string;
 }
 
 @Injectable()
@@ -22,27 +19,24 @@ export class AuthService implements AuthRepository {
     return bcrypt.hash(password, saltRounds);
   }
 
-  async register(username: string, email: string, password: string, firstName: string, lastName: string) {
-    const existing = this.users.find(u => u.email === email);
+  async register(username: string, password: string) {
+    const existing = this.users.find(u => u.username === username);
     if (existing) {
-      return { success: false, message: 'Bu email ile kullanıcı zaten var' };
+      return { success: false, message: 'Bu kullanıcı adı zaten mevcut' };
     }
 
     const newUser: User = {
       id: this.idCounter++,
       username,
-      email,
-      password: await this.hashPassword(password),
-      firstName,
-      lastName
+      password: await this.hashPassword(password)
     };
 
     this.users.push(newUser);
-    return { success: true, user: { ...newUser, password: undefined } };
+    return { success: true, user: { id: newUser.id, username: newUser.username } };
   }
 
-  async validateUser(email: string, password: string) {
-    const user = this.users.find(u => u.email === email);
+  async validateUser(username: string, password: string) {
+    const user = this.users.find(u => u.username === username);
     if (!user) return null;
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -51,19 +45,18 @@ export class AuthService implements AuthRepository {
     return user;
   }
 
-
-  async login(email: string, password: string) {
-    const user = await this.validateUser(email, password);
+  async login(username: string, password: string) {
+    const user = await this.validateUser(username, password);
     if (!user) {
-      return { success: false, message: 'Geçersiz email veya şifre' };
+      return { success: false, message: 'Geçersiz kullanıcı adı veya şifre' };
     }
 
-    this.loggedInUsers.push(email);
-    return { success: true, message: 'Giriş başarılı', user: { ...user, password: undefined } };
+    this.loggedInUsers.push(username);
+    return { success: true, message: 'Giriş başarılı', user: { username: user.username } };
   }
 
-  async logout(email: string) {
-    this.loggedInUsers = this.loggedInUsers.filter(u => u !== email);
+  async logout(username: string) {
+    this.loggedInUsers = this.loggedInUsers.filter(u => u !== username);
     return { success: true, message: 'Çıkış yapıldı' };
   }
 }

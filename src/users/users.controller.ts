@@ -3,7 +3,7 @@ import { UsersService } from './users.service';
 
 @Controller('auth')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) { }
+  constructor(private readonly usersService: UsersService) {}
 
   @Post('register')
   register(@Body() body: { username: string; password: string }) {
@@ -14,7 +14,7 @@ export class UsersController {
   async login(@Body() body: { username: string; password: string }) {
     const user = await this.usersService.login(body.username, body.password);
     if (!user) {
-      return { success: false, message: 'bilinmeyen' };
+      return { success: false, message: 'Giriş başarısız' };
     }
     return { success: true, user };
   }
