@@ -67,7 +67,7 @@ export default function ForgotPassword({ onBack, onResetPassword }) {
         onClick={onBack}
         className="text-blue-500 hover:text-blue-700 text-center text-sm"
       >
-        ← Giriş sayfasına dön
+        Giriş sayfasına dön
       </button>
 
       {message && (
