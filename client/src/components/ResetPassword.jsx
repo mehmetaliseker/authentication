@@ -140,3 +140,4 @@ export default function ResetPassword({ token, onSuccess, onBack }) {
     </div>
   );
 }
+
