@@ -20,7 +20,7 @@ export function useAuth() {
       if (response.ok) {
         if (data.userId) {
           setMessage(`✅ Hoşgeldin ${data.user?.first_name || email}!`);
-          // Burada localStorage'a token kaydedilebilir
+          // localStoragea token kaydedilebilir
           localStorage.setItem('userId', data.userId);
         } else {
           setMessage(data.message || 'Giriş başarısız');
@@ -52,7 +52,7 @@ export function useAuth() {
       if (response.ok) {
         if (data.id) {
           setMessage(`✅ Kayıt başarılı! Hoşgeldin ${data.first_name}!`);
-          // Burada otomatik login yapılabilir
+          // otomatik login 
         } else {
           setMessage(data.message || 'Kayıt başarısız');
         }

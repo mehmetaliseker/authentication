@@ -68,7 +68,7 @@ function App() {
             onClick={testAPI}
             className="w-full mb-4 bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition"
           >
-            🔍 API Bağlantısını Test Et
+            API Bağlantısını Test Et
           </button>
           {apiStatus && (
             <p className={`text-center text-sm ${apiStatus.includes('✅') ? 'text-green-600' : 'text-red-500'}`}>

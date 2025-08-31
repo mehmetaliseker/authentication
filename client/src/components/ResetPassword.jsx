@@ -8,7 +8,6 @@ export default function ResetPassword({ token, onSuccess, onBack }) {
   const [isValidToken, setIsValidToken] = useState(false);
 
   useEffect(() => {
-    // Token'ı doğrula
     verifyToken();
   }, [token]);
 
