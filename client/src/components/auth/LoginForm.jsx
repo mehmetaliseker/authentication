@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
-export default function Login({ onForgotPassword }) {
+export default function LoginForm({ onForgotPassword }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { message, login, isLoading } = useAuth();
+  const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    login(email, password);
+    await login(email, password);
+    // Login başarılı olduğunda dashboard'a yönlendir
+    navigate('/dashboard');
   };
 
   return (
@@ -53,7 +57,9 @@ export default function Login({ onForgotPassword }) {
       </button>
 
       {message && (
-        <p className={`text-center text-sm ${message.includes('✅') ? 'text-green-600' : 'text-red-500'}`}>
+        <p className={`text-center text-sm ${
+          message.includes('✅') ? 'text-green-600' : 'text-red-500'
+        }`}>
           {message}
         </p>
       )}

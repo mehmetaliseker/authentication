@@ -8,14 +8,22 @@ ALTER TABLE public.users
     ADD COLUMN locked_until TIMESTAMP;
 
 -- Index'ler oluştur
-CREATE INDEX idx_users_last_login ON public.users(last_login);
-CREATE INDEX idx_users_failed_attempts ON public.users(failed_attempts);
-CREATE INDEX idx_users_account_locked ON public.users(account_locked);
+CREATE INDEX IF NOT EXISTS idx_users_last_login ON public.users(last_login);
+CREATE INDEX IF NOT EXISTS idx_users_failed_attempts ON public.users(failed_attempts);
+CREATE INDEX IF NOT EXISTS idx_users_account_locked ON public.users(account_locked);
 
--- Constraint'ler ekle
-ALTER TABLE public.users 
-    ADD CONSTRAINT chk_failed_attempts_max 
-    CHECK (failed_attempts <= 10);
+-- Constraint'ler ekle (eğer yoksa)
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conname = 'chk_failed_attempts_max'
+    ) THEN
+        ALTER TABLE public.users 
+        ADD CONSTRAINT chk_failed_attempts_max 
+        CHECK (failed_attempts <= 10);
+    END IF;
+END $$;
 
 -- Kolon yorumları ekle
 COMMENT ON COLUMN public.users.last_login IS 'Son başarılı login zamanı';

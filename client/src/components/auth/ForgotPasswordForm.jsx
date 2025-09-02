@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { useAuth } from '../../hooks/useAuth';
 
-export default function ForgotPassword({ onBack, onResetPassword }) {
+export default function ForgotPasswordForm({ onBack, onResetPassword }) {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -18,19 +19,18 @@ export default function ForgotPassword({ onBack, onResetPassword }) {
       });
 
       const data = await response.json();
-
+      
       if (response.ok) {
-        setMessage(`✅ ${data.message}`);
-        // 2 saniye sonra reset password sayfasına yönlendir
-        setTimeout(() => {
+        setMessage('✅ Şifre sıfırlama linki email adresinize gönderildi');
+        // Development için token'ı kullan
+        if (data.token) {
           onResetPassword(data.token);
-        }, 2000);
+        }
       } else {
-        setMessage(`❌ ${data.message || 'Bir hata oluştu'}`);
+        setMessage(data.message || 'Bir hata oluştu');
       }
     } catch (error) {
-      console.error('Forgot password error:', error);
-      setMessage('❌ Sunucuya bağlanılamadı. Lütfen tekrar deneyin.');
+      setMessage('❌ Sunucuya bağlanılamadı');
     } finally {
       setIsLoading(false);
     }
@@ -38,10 +38,7 @@ export default function ForgotPassword({ onBack, onResetPassword }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-2xl font-bold text-center text-gray-800">Şifre Sıfırlama</h2>
-      <p className="text-center text-gray-600 text-sm">
-        Email adresinizi girin, size şifre sıfırlama linki göndereceğiz.
-      </p>
+      <h2 className="text-2xl font-bold text-center text-gray-800">Şifremi Unuttum</h2>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <input
@@ -67,11 +64,13 @@ export default function ForgotPassword({ onBack, onResetPassword }) {
         onClick={onBack}
         className="text-blue-500 hover:text-blue-700 text-center text-sm"
       >
-        Giriş sayfasına dön
+        Geri Dön
       </button>
 
       {message && (
-        <p className={`text-center text-sm ${message.includes('✅') ? 'text-green-600' : 'text-red-500'}`}>
+        <p className={`text-center text-sm ${
+          message.includes('✅') ? 'text-green-600' : 'text-red-500'
+        }`}>
           {message}
         </p>
       )}

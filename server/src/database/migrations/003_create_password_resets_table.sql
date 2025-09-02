@@ -1,7 +1,7 @@
 -- Migration: 003_create_password_resets_table.sql
 -- Description: Password reset işlemleri için tablo oluşturur
 
-CREATE TABLE public.password_resets (
+CREATE TABLE IF NOT EXISTS public.password_resets (
     id SERIAL PRIMARY KEY,
     user_id INT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     reset_token VARCHAR(255) NOT NULL UNIQUE,
@@ -11,20 +11,33 @@ CREATE TABLE public.password_resets (
 );
 
 -- Index'ler oluştur
-CREATE INDEX idx_password_resets_user_id ON public.password_resets(user_id);
-CREATE INDEX idx_password_resets_reset_token ON public.password_resets(reset_token);
-CREATE INDEX idx_password_resets_expires_at ON public.password_resets(expires_at);
-CREATE INDEX idx_password_resets_used ON public.password_resets(used);
-CREATE INDEX idx_password_resets_created_at ON public.password_resets(created_at);
+CREATE INDEX IF NOT EXISTS idx_password_resets_user_id ON public.password_resets(user_id);
+CREATE INDEX IF NOT EXISTS idx_password_resets_reset_token ON public.password_resets(reset_token);
+CREATE INDEX IF NOT EXISTS idx_password_resets_expires_at ON public.password_resets(expires_at);
+CREATE INDEX IF NOT EXISTS idx_password_resets_used ON public.password_resets(used);
+CREATE INDEX IF NOT EXISTS idx_password_resets_created_at ON public.password_resets(created_at);
 
--- Constraint'ler ekle
-ALTER TABLE public.password_resets 
-    ADD CONSTRAINT chk_expires_at_future 
-    CHECK (expires_at > created_at);
-
-ALTER TABLE public.password_resets 
-    ADD CONSTRAINT chk_reset_token_length 
-    CHECK (LENGTH(reset_token) >= 32);
+-- Constraint'ler ekle (eğer yoksa)
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conname = 'chk_expires_at_future'
+    ) THEN
+        ALTER TABLE public.password_resets 
+        ADD CONSTRAINT chk_expires_at_future 
+        CHECK (expires_at > created_at);
+    END IF;
+    
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conname = 'chk_reset_token_length'
+    ) THEN
+        ALTER TABLE public.password_resets 
+        ADD CONSTRAINT chk_reset_token_length 
+        CHECK (LENGTH(reset_token) >= 32);
+    END IF;
+END $$;
 
 -- Tablo ve kolon yorumları ekle
 COMMENT ON TABLE public.password_resets IS 'Şifre sıfırlama işlemlerini saklar';

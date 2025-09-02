@@ -1,7 +1,7 @@
 -- Migration: 001_create_users_table.sql
 -- Description: Users tablosunu oluşturur
 
-CREATE TABLE public.users (
+CREATE TABLE IF NOT EXISTS public.users (
     id SERIAL PRIMARY KEY,
     first_name VARCHAR(100) NOT NULL CHECK (LENGTH(first_name) >= 2),
     last_name VARCHAR(100) NOT NULL CHECK (LENGTH(last_name) >= 2),
@@ -14,9 +14,9 @@ CREATE TABLE public.users (
 );
 
 -- Index'ler oluştur
-CREATE INDEX idx_users_email ON public.users(email);
-CREATE INDEX idx_users_verification_token ON public.users(verification_token);
-CREATE INDEX idx_users_created_at ON public.users(created_at);
+CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
+CREATE INDEX IF NOT EXISTS idx_users_verification_token ON public.users(verification_token);
+CREATE INDEX IF NOT EXISTS idx_users_created_at ON public.users(created_at);
 
 -- Updated_at için trigger oluştur
 CREATE OR REPLACE FUNCTION update_updated_at_column()

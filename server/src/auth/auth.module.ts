@@ -1,14 +1,22 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthController } from './controllers/auth.controller';
 import { AuthService } from './services/auth.service';
-import { User } from './entities/user.entity';
-import { PasswordReset } from './entities/password-reset.entity';
+import { JwtService } from './services/jwt.service';
+import { UserRepository } from './repositories/user.repository';
+import { PasswordResetRepository } from './repositories/password-reset.repository';
+import { LogoutLogRepository } from './repositories/logout-log.repository';
+import { DatabaseService } from '../database/database.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, PasswordReset])],
   controllers: [AuthController],
-  providers: [AuthService],
-  exports: [AuthService],
+  providers: [
+    AuthService,
+    JwtService,
+    UserRepository,
+    PasswordResetRepository,
+    LogoutLogRepository,
+    DatabaseService
+  ],
+  exports: [AuthService, JwtService],
 })
 export class AuthModule {}

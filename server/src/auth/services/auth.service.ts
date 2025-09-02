@@ -1,50 +1,53 @@
-import { Injectable, UnauthorizedException, ConflictException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User } from '../entities/user.entity';
-import { PasswordReset } from '../entities/password-reset.entity';
+import { Injectable, UnauthorizedException, ConflictException, InternalServerErrorException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { UserRepository } from '../repositories/user.repository';
+import { PasswordResetRepository } from '../repositories/password-reset.repository';
+import { LogoutLogRepository } from '../repositories/logout-log.repository';
+import { JwtService } from './jwt.service';
 import { RegisterDto } from '../dtos/register.dto';
 import { LoginDto } from '../dtos/login.dto';
+import { IUser } from '../interfaces/user.interface';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectRepository(User)
-    private readonly userRepo: Repository<User>,
-    @InjectRepository(PasswordReset)
-    private readonly passwordResetRepo: Repository<PasswordReset>,
+    private readonly userRepository: UserRepository,
+    private readonly passwordResetRepository: PasswordResetRepository,
+    private readonly logoutLogRepository: LogoutLogRepository,
+    private readonly jwtService: JwtService,
   ) { }
 
-  async register(dto: RegisterDto) {
+  async register(dto: RegisterDto): Promise<{ message: string; user: Partial<IUser> }> {
     try {
       // Email zaten var mı kontrol et
-      const existingUser = await this.userRepo.findOne({ where: { email: dto.email } });
+      const existingUser = await this.userRepository.findByEmail(dto.email);
       if (existingUser) {
         throw new ConflictException('Bu email adresi zaten kullanılıyor');
       }
 
       // Şifreyi hash'le
-      const hash = await bcrypt.hash(dto.password, 10);
+      const hash = await bcrypt.hash(dto.password, 12);
 
       // Yeni kullanıcı oluştur
-      const user = this.userRepo.create({
-        ...dto,
+      const userData = {
+        first_name: dto.first_name,
+        last_name: dto.last_name,
+        email: dto.email,
         password_hash: hash,
         is_verified: false // Email doğrulama gerekli
-      });
+      };
 
-      // Kullanıcıyı kaydet
-      const savedUser = await this.userRepo.save(user);
-
-      console.log(`✅ Yeni kullanıcı kaydedildi: ${dto.email}`);
+      const savedUser = await this.userRepository.create(userData);
 
       // Hassas bilgileri çıkar
       const { password_hash, ...result } = savedUser;
-      return result;
+      return {
+        message: 'Kullanıcı başarıyla kaydedildi',
+        user: result
+      };
 
     } catch (error) {
-      console.error(`❌ Kullanıcı kaydı hatası: ${error.message}`);
       if (error instanceof ConflictException) {
         throw error;
       }
@@ -52,12 +55,16 @@ export class AuthService {
     }
   }
 
-  async login(dto: LoginDto) {
+  async login(dto: LoginDto): Promise<{ 
+    message: string; 
+    accessToken: string; 
+    refreshToken: string; 
+    user: Partial<IUser> 
+  }> {
     try {
       // Kullanıcıyı bul
-      const user = await this.userRepo.findOne({ where: { email: dto.email } });
+      const user = await this.userRepository.findByEmail(dto.email);
       if (!user) {
-        console.log(`❌ Login denemesi: Email bulunamadı - ${dto.email}`);
         throw new UnauthorizedException('Geçersiz email veya şifre');
       }
 
@@ -70,33 +77,34 @@ export class AuthService {
       const isMatch = await bcrypt.compare(dto.password, user.password_hash);
       if (!isMatch) {
         // Başarısız login denemesi
-        user.failed_attempts += 1;
+        const newFailedAttempts = user.failed_attempts + 1;
+        let shouldLock = false;
+        let lockedUntil: Date | null = null;
 
         // 5 başarısız denemeden sonra hesabı kilitle
-        if (user.failed_attempts >= 5) {
-          user.account_locked = true;
-          user.locked_until = new Date(Date.now() + 30 * 60 * 1000); // 30 dakika
-          console.log(`🔒 Hesap kilitlendi: ${dto.email}`);
+        if (newFailedAttempts >= 5) {
+          shouldLock = true;
+          lockedUntil = new Date(Date.now() + 30 * 60 * 1000); // 30 dakika
         }
 
-        await this.userRepo.save(user);
-        console.log(`❌ Login denemesi: Yanlış şifre - ${dto.email}`);
+        await this.userRepository.updateFailedAttempts(user.id, newFailedAttempts, shouldLock, lockedUntil || undefined);
         throw new UnauthorizedException('Geçersiz email veya şifre');
       }
 
-      // Başarılı login
-      user.last_login = new Date();
-      user.failed_attempts = 0; // Başarısız deneme sayısını sıfırla
-      user.account_locked = false; // Hesabı aç
-      user.locked_until = null;
+      // Başarılı login - hesabı aç ve deneme sayısını sıfırla
+      await this.userRepository.updateFailedAttempts(user.id, 0, false, undefined);
+      await this.userRepository.updateLastLogin(user.id);
 
-      await this.userRepo.save(user);
-
-      console.log(`✅ Başarılı login: ${dto.email}`);
+      // JWT token çifti oluştur
+      const tokenPair = this.jwtService.generateTokenPair({
+        sub: user.id,
+        email: user.email
+      });
 
       return {
         message: 'Giriş başarılı',
-        userId: user.id,
+        accessToken: tokenPair.accessToken,
+        refreshToken: tokenPair.refreshToken,
         user: {
           id: user.id,
           email: user.email,
@@ -107,7 +115,6 @@ export class AuthService {
       };
 
     } catch (error) {
-      console.error(`❌ Login hatası: ${error.message}`);
       if (error instanceof UnauthorizedException) {
         throw error;
       }
@@ -115,32 +122,31 @@ export class AuthService {
     }
   }
 
-  async forgotPassword(email: string) {
+  async forgotPassword(email: string): Promise<{ 
+    message: string; 
+    token: string; 
+    expires_at: Date 
+  }> {
     try {
-      const user = await this.userRepo.findOne({ where: { email } });
+      const user = await this.userRepository.findByEmail(email);
       if (!user) {
         throw new NotFoundException('Email bulunamadı');
       }
 
       // Eski reset token'ları temizle
-      await this.passwordResetRepo.delete({ user: { id: user.id } });
+      await this.passwordResetRepository.deleteByUserId(user.id);
 
-      // Reset token oluştur (32 karakter)
-      const token = Math.random().toString(36).substring(2, 15) +
-        Math.random().toString(36).substring(2, 15) +
-        Math.random().toString(36).substring(2, 15);
+      // Güvenli reset token oluştur (64 karakter)
+      const token = crypto.randomBytes(32).toString('hex');
 
-      // Token'ı kaydet
-      const passwordReset = this.passwordResetRepo.create({
-        user: user,
+      // Token'ı kaydet (1 saat geçerli)
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+      const passwordReset = await this.passwordResetRepository.create({
+        user_id: user.id,
         reset_token: token,
-        expires_at: new Date(Date.now() + 60 * 60 * 1000), // 1 saat geçerli
+        expires_at: expiresAt,
         used: false
       });
-
-      await this.passwordResetRepo.save(passwordReset);
-
-      console.log(`🔑 Şifre sıfırlama token'ı oluşturuldu: ${email}`);
 
       // Gerçek uygulamada burada email gönderilir
       return {
@@ -150,7 +156,6 @@ export class AuthService {
       };
 
     } catch (error) {
-      console.error(`❌ Şifre sıfırlama hatası: ${error.message}`);
       if (error instanceof NotFoundException) {
         throw error;
       }
@@ -158,11 +163,13 @@ export class AuthService {
     }
   }
 
-  async verifyResetToken(token: string) {
+  async verifyResetToken(token: string): Promise<{ 
+    message: string; 
+    valid: boolean; 
+    expires_at: Date 
+  }> {
     try {
-      const passwordReset = await this.passwordResetRepo.findOne({
-        where: { reset_token: token }
-      });
+      const passwordReset = await this.passwordResetRepository.findByToken(token);
 
       if (!passwordReset) {
         throw new NotFoundException('Geçersiz token');
@@ -183,17 +190,16 @@ export class AuthService {
       };
 
     } catch (error) {
-      console.error(`❌ Token doğrulama hatası: ${error.message}`);
       throw error;
     }
   }
 
-  async resetPassword(token: string, newPassword: string) {
+  async resetPassword(token: string, newPassword: string): Promise<{ 
+    message: string; 
+    success: boolean 
+  }> {
     try {
-      const passwordReset = await this.passwordResetRepo.findOne({
-        where: { reset_token: token },
-        relations: ['user']
-      });
+      const passwordReset = await this.passwordResetRepository.findByToken(token);
 
       if (!passwordReset) {
         throw new NotFoundException('Geçersiz token');
@@ -207,20 +213,34 @@ export class AuthService {
         throw new UnauthorizedException('Token süresi dolmuş');
       }
 
+      // Kullanıcıyı al
+      const user = await this.userRepository.findById(passwordReset.user_id);
+      if (!user) {
+        throw new NotFoundException('Kullanıcı bulunamadı');
+      }
+
       // Yeni şifreyi hash'le
-      const newPasswordHash = await bcrypt.hash(newPassword, 10);
+      const newPasswordHash = await bcrypt.hash(newPassword, 12);
+
+      // Son 3 şifreyi kontrol et
+      const passwordHistory = await this.userRepository.getPasswordHistory(user.id);
+      for (const oldHash of passwordHistory) {
+        const isSame = await bcrypt.compare(newPassword, oldHash);
+        if (isSame) {
+          throw new BadRequestException('Yeni şifre son 3 şifreden biriyle aynı olamaz');
+        }
+      }
 
       // Kullanıcının şifresini güncelle
-      await this.userRepo.update(passwordReset.user.id, {
+      await this.userRepository.update(user.id, {
         password_hash: newPasswordHash
       });
 
-      // Token'ı kullanıldı olarak işaretle
-      await this.passwordResetRepo.update(passwordReset.id, {
-        used: true
-      });
+      // Yeni şifreyi geçmişe ekle
+      await this.userRepository.addPasswordToHistory(user.id, newPasswordHash);
 
-      console.log(`✅ Şifre başarıyla sıfırlandı: ${passwordReset.user.email}`);
+      // Token'ı kullanıldı olarak işaretle
+      await this.passwordResetRepository.markAsUsed(passwordReset.id);
 
       return {
         message: 'Şifreniz başarıyla sıfırlandı',
@@ -228,8 +248,66 @@ export class AuthService {
       };
 
     } catch (error) {
-      console.error(`❌ Şifre sıfırlama hatası: ${error.message}`);
       throw error;
+    }
+  }
+
+  async logout(userId: number, ipAddress?: string, userAgent?: string): Promise<{ message: string; logoutTime: Date }> {
+    try {
+      // Son giriş zamanını al
+      const lastLoginTime = await this.logoutLogRepository.getLastLoginTime(userId);
+      const logoutTime = new Date();
+      
+      // Session süresini hesapla
+      let sessionDuration: string | null = null;
+      if (lastLoginTime) {
+        const durationMs = logoutTime.getTime() - lastLoginTime.getTime();
+        const hours = Math.floor(durationMs / (1000 * 60 * 60));
+        const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+        sessionDuration = `${hours}:${minutes.toString().padStart(2, '0')}`;
+      }
+
+      // Logout log'unu kaydet
+      await this.logoutLogRepository.create({
+        user_id: userId,
+        logout_time: logoutTime,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+        session_duration: sessionDuration || undefined
+      });
+
+      return {
+        message: 'Başarıyla çıkış yapıldı',
+        logoutTime: logoutTime
+      };
+    } catch (error) {
+      throw new InternalServerErrorException('Çıkış işlemi sırasında bir hata oluştu');
+    }
+  }
+
+  async refreshToken(refreshToken: string): Promise<{ 
+    accessToken: string; 
+    refreshToken: string 
+  }> {
+    try {
+      const payload = this.jwtService.verifyRefreshToken(refreshToken);
+      
+      // Kullanıcının hala var olduğunu kontrol et
+      const user = await this.userRepository.findById(payload.sub);
+      if (!user) {
+        throw new UnauthorizedException('Kullanıcı bulunamadı');
+      }
+
+      // Yeni token çifti oluştur
+      const tokenPair = this.jwtService.generateTokenPair({
+        sub: user.id,
+        email: user.email
+      });
+
+      return tokenPair;
+
+    } catch (error) {
+      throw new UnauthorizedException('Geçersiz refresh token');
     }
   }
 }
