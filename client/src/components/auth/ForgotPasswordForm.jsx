@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function ForgotPasswordForm({ onBack, onResetPassword }) {
   const [email, setEmail] = useState('');
@@ -48,6 +48,7 @@ export default function ForgotPasswordForm({ onBack, onResetPassword }) {
           onChange={(e) => setEmail(e.target.value)}
           required
           disabled={isLoading}
+          autoComplete="email"
           className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 disabled:opacity-50"
         />
 

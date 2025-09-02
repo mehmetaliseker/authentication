@@ -21,7 +21,7 @@ export interface IPasswordReset {
   expires_at: Date;
   used: boolean;
   created_at: Date;
-  // JOIN ile gelen user bilgileri
+  
   email?: string;
   first_name?: string;
   last_name?: string;

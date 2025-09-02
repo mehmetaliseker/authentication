@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function ResetPasswordForm({ token, onSuccess, onBack }) {
   const [password, setPassword] = useState('');
@@ -52,6 +52,7 @@ export default function ResetPasswordForm({ token, onSuccess, onBack }) {
           onChange={(e) => setPassword(e.target.value)}
           required
           disabled={isLoading}
+          autoComplete="new-password"
           className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 disabled:opacity-50"
         />
 
@@ -62,6 +63,7 @@ export default function ResetPasswordForm({ token, onSuccess, onBack }) {
           onChange={(e) => setConfirmPassword(e.target.value)}
           required
           disabled={isLoading}
+          autoComplete="new-password"
           className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 disabled:opacity-50"
         />
 

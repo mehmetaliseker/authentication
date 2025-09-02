@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 
-export function useAuth() {
+const AuthContext = createContext();
+
+export function AuthProvider({ children }) {
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [user, setUser] = useState(null);
@@ -21,23 +23,31 @@ export function useAuth() {
       
       if (response.ok) {
         if (data.accessToken && data.user) {
-          setMessage(`✅ Hoşgeldin ${data.user.first_name || email}!`);
-          setUser(data.user);
-          setIsAuthenticated(true);
-          
-          // Token'ları localStorage'a kaydet
+          // Önce localStorage'a kaydet
           localStorage.setItem('accessToken', data.accessToken);
           localStorage.setItem('refreshToken', data.refreshToken);
           localStorage.setItem('user', JSON.stringify(data.user));
+          
+          // State'i güncelle
+          setUser(data.user);
+          setIsAuthenticated(true);
+          setMessage(`✅ Hoşgeldin ${data.user.first_name || email}!`);
+          
+          console.log('Login başarılı, state güncellendi:', { user: data.user, isAuthenticated: true });
+          
+          return true;
         } else {
           setMessage(data.message || 'Giriş başarısız');
+          return false;
         }
       } else {
         setMessage(data.message || 'Giriş başarısız');
+        return false;
       }
     } catch (error) {
       console.error('Login error:', error);
       setMessage('❌ Sunucuya bağlanılamadı. Lütfen tekrar deneyin.');
+      return false;
     } finally {
       setIsLoading(false);
     }
@@ -59,15 +69,19 @@ export function useAuth() {
       if (response.ok) {
         if (data.user) {
           setMessage(`✅ Kayıt başarılı! Hoşgeldin ${data.user.first_name}!`);
+          return true;
         } else {
           setMessage(data.message || 'Kayıt başarısız');
+          return false;
         }
       } else {
         setMessage(data.message || 'Kayıt başarısız');
+        return false;
       }
     } catch (error) {
       console.error('Register error:', error);
       setMessage('❌ Sunucuya bağlanılamadı. Lütfen tekrar deneyin.');
+      return false;
     } finally {
       setIsLoading(false);
     }
@@ -114,32 +128,52 @@ export function useAuth() {
   }
 
   // Sayfa yüklendiğinde localStorage'dan kullanıcı bilgilerini yükle
-  function checkAuthStatus() {
+  const checkAuthStatus = useCallback(() => {
     const storedUser = localStorage.getItem('user');
     const storedToken = localStorage.getItem('accessToken');
+    
+    console.log('checkAuthStatus çalışıyor:', { storedUser: !!storedUser, storedToken: !!storedToken });
     
     if (storedUser && storedToken) {
       try {
         const userData = JSON.parse(storedUser);
         setUser(userData);
         setIsAuthenticated(true);
+        console.log('Auth durumu localStorage\'dan yüklendi:', userData);
       } catch (error) {
+        console.error('localStorage verisi geçersiz:', error);
         // Geçersiz veri varsa temizle
         localStorage.removeItem('user');
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
       }
+    } else {
+      console.log('localStorage\'da auth verisi yok');
     }
-  }
+  }, []);
 
-  return { 
-    message, 
-    login, 
-    register, 
-    logout, 
-    isLoading, 
-    user, 
-    isAuthenticated, 
-    checkAuthStatus 
+  const value = {
+    message,
+    login,
+    register,
+    logout,
+    isLoading,
+    user,
+    isAuthenticated,
+    checkAuthStatus
   };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 }

@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './hooks/useAuth';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import AuthLayout from './components/layout/AuthLayout';
 import DashboardLayout from './components/layout/DashboardLayout';
-import ProtectedRoute from './components/auth/ProtectedRoute';
+
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -12,7 +12,7 @@ import Logout from './pages/Logout';
 import Dashboard from './pages/Dashboard';
 import './App.css';
 
-function App() {
+function AppContent() {
   const { checkAuthStatus } = useAuth();
 
   useEffect(() => {
@@ -32,15 +32,19 @@ function App() {
           <Route path="logout" element={<Logout />} />
         </Route>
 
-        <Route path="/dashboard" element={
-          <ProtectedRoute>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }>
+        <Route path="/dashboard" element={<DashboardLayout />}>
           <Route index element={<Dashboard />} />
         </Route>
       </Routes>
     </Router>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

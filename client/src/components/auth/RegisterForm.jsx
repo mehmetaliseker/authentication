@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export default function RegisterForm() {
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
     email: '',
-    password: '',
-    confirmPassword: ''
+    password: ''
   });
   const { message, register, isLoading } = useAuth();
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setFormData({
@@ -18,13 +19,16 @@ export default function RegisterForm() {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.password !== formData.confirmPassword) {
-      alert('Şifreler eşleşmiyor!');
-      return;
+    
+    const result = await register(formData);
+    // Kayıt başarılı olduğunda login sayfasına yönlendir
+    if (result) {
+      setTimeout(() => {
+        navigate('/login');
+      }, 2000); // 2 saniye sonra login sayfasına yönlendir
     }
-    register(formData);
   };
 
   return (
@@ -40,6 +44,7 @@ export default function RegisterForm() {
           onChange={handleChange}
           required
           disabled={isLoading}
+          autoComplete="given-name"
           className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 disabled:opacity-50"
         />
 
@@ -51,6 +56,7 @@ export default function RegisterForm() {
           onChange={handleChange}
           required
           disabled={isLoading}
+          autoComplete="family-name"
           className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 disabled:opacity-50"
         />
 
@@ -62,6 +68,7 @@ export default function RegisterForm() {
           onChange={handleChange}
           required
           disabled={isLoading}
+          autoComplete="email"
           className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 disabled:opacity-50"
         />
 
@@ -73,17 +80,7 @@ export default function RegisterForm() {
           onChange={handleChange}
           required
           disabled={isLoading}
-          className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 disabled:opacity-50"
-        />
-
-        <input
-          type="password"
-          name="confirmPassword"
-          placeholder="Şifre Tekrar"
-          value={formData.confirmPassword}
-          onChange={handleChange}
-          required
-          disabled={isLoading}
+          autoComplete="new-password"
           className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 disabled:opacity-50"
         />
 
@@ -97,11 +94,18 @@ export default function RegisterForm() {
       </form>
 
       {message && (
-        <p className={`text-center text-sm ${
-          message.includes('✅') ? 'text-green-600' : 'text-red-500'
-        }`}>
-          {message}
-        </p>
+        <div className="text-center">
+          <p className={`text-sm ${
+            message.includes('✅') ? 'text-green-600' : 'text-red-500'
+          }`}>
+            {message}
+          </p>
+          {message.includes('✅') && (
+            <p className="text-xs text-gray-500 mt-1">
+              Login sayfasına yönlendiriliyorsunuz...
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
