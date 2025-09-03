@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import Button from '../shared/Button';
 
 export default function DashboardHeader() {
   const { user, logout } = useAuth();
@@ -25,12 +26,13 @@ export default function DashboardHeader() {
               <p className="text-xs text-gray-500">Giriş yapıldı</p>
             </div>
             
-            <button
+            <Button
               onClick={handleLogout}
-              className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition-colors text-sm"
+              variant="danger"
+              size="sm"
             >
               Çıkış Yap
-            </button>
+            </Button>
           </div>
         </div>
       </div>

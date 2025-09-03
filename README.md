@@ -4,7 +4,7 @@ Bu proje, modern bir authentication sistemi içeren full-stack uygulamadır.
 
 ## Proje Yapısı
 
-- **`server/`** - NestJS backend API (PostgreSQL + TypeORM)
+- **`server/`** - NestJS backend API (PostgreSQL)
 - **`client/`** - React frontend (Vite + Tailwind CSS)
 
 ## Kurulum
@@ -34,7 +34,7 @@ npm run dev
 
 ## Teknolojiler
 
-- **Backend**: NestJS, TypeORM, PostgreSQL, JWT
+- **Backend**: NestJS, PostgreSQL, JWT
 - **Frontend**: React, Vite, Tailwind CSS
 - **Veritabanı**: PostgreSQL
 - **Authentication**: JWT, bcrypt

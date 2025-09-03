@@ -6,7 +6,6 @@ import DashboardHeader from './DashboardHeader';
 export default function DashboardLayout() {
   const { isAuthenticated, user, isLoading } = useAuth();
 
-  // Loading durumunda bekle
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -18,7 +17,6 @@ export default function DashboardLayout() {
     );
   }
 
-  // Kullanıcı giriş yapmamışsa login sayfasına gönder
   if (!isAuthenticated || !user) {
     return <Navigate to="/login" replace />;
   }
