@@ -1,36 +1,30 @@
-import React, { useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
+import { useAuth, useForm, useNavigation } from '../../hooks/useAuth';
 import RegisterFormHeader from './RegisterFormHeader';
 import RegisterFormFields from './RegisterFormFields';
 import RegisterFormFooter from './RegisterFormFooter';
 
 export default function RegisterForm() {
-  const [formData, setFormData] = useState({
+  const { message, register, isLoading } = useAuth();
+  const { goTo } = useNavigation();
+  const { values, handleChange, isSubmitting, setIsSubmitting } = useForm({
     first_name: '',
     last_name: '',
     email: '',
     password: ''
   });
-  const { message, register, isLoading } = useAuth();
-  const navigate = useNavigate();
-
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
     
-    const result = await register(formData);
+    const result = await register(values);
     if (result) {
       setTimeout(() => {
-        navigate('/login');
+        goTo('/login');
       }, 2000);
     }
+    setIsSubmitting(false);
   };
 
   return (
@@ -38,9 +32,9 @@ export default function RegisterForm() {
       <RegisterFormHeader />
       
       <RegisterFormFields
-        formData={formData}
+        formData={values}
         handleChange={handleChange}
-        isLoading={isLoading}
+        isLoading={isLoading || isSubmitting}
         onSubmit={handleSubmit}
       />
       

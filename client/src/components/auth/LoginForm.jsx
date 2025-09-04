@@ -1,23 +1,27 @@
-import React, { useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
-import { useNavigate, Navigate } from 'react-router-dom';
+import React from 'react';
+import { useAuth, useForm, useNavigation } from '../../hooks/useAuth';
+import { Navigate } from 'react-router-dom';
 import LoginFormHeader from './LoginFormHeader';
 import LoginFormFields from './LoginFormFields';
 import LoginFormFooter from './LoginFormFooter';
 
 export default function LoginForm({ onForgotPassword }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const { message, login, isLoading, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
+  const { goTo } = useNavigation();
+  const { values, handleChange, isSubmitting, setIsSubmitting } = useForm({
+    email: '',
+    password: ''
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const result = await login(email, password);
+    setIsSubmitting(true);
+    const result = await login(values.email, values.password);
 
     if (result) {
-      navigate('/dashboard', { replace: true });
+      goTo('/dashboard', { replace: true });
     }
+    setIsSubmitting(false);
   };
 
   if (isAuthenticated) {
@@ -29,11 +33,11 @@ export default function LoginForm({ onForgotPassword }) {
       <LoginFormHeader />
       
       <LoginFormFields
-        email={email}
-        setEmail={setEmail}
-        password={password}
-        setPassword={setPassword}
-        isLoading={isLoading}
+        email={values.email}
+        setEmail={(value) => handleChange({ target: { name: 'email', value } })}
+        password={values.password}
+        setPassword={(value) => handleChange({ target: { name: 'password', value } })}
+        isLoading={isLoading || isSubmitting}
         onSubmit={handleSubmit}
       />
       

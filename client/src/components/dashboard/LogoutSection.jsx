@@ -1,25 +1,24 @@
-import React, { useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
+import { useAuth, useForm, useNavigation } from '../../hooks/useAuth';
 import LogoutSectionWarning from './LogoutSectionWarning';
 import LogoutSectionButtons from './LogoutSectionButtons';
 
 export default function LogoutSection() {
   const { logout, isLoading } = useAuth();
-  const navigate = useNavigate();
-  const [showConfirm, setShowConfirm] = useState(false);
+  const { goTo } = useNavigation();
+  const { values, setValue } = useForm({ showConfirm: false });
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    goTo('/login');
   };
 
   const handleConfirmLogout = () => {
-    setShowConfirm(true);
+    setValue('showConfirm', true);
   };
 
   const handleCancelLogout = () => {
-    setShowConfirm(false);
+    setValue('showConfirm', false);
   };
 
   return (
@@ -30,7 +29,7 @@ export default function LogoutSection() {
         <LogoutSectionWarning />
         
         <LogoutSectionButtons
-          showConfirm={showConfirm}
+          showConfirm={values.showConfirm}
           isLoading={isLoading}
           onConfirmLogout={handleConfirmLogout}
           onLogout={handleLogout}

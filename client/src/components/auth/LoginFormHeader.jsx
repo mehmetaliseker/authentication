@@ -1,9 +1,9 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigation } from '../../hooks/useAuth';
 import Button from '../shared/Button';
 
 export default function LoginFormHeader() {
-  const navigate = useNavigate();
+  const { goTo } = useNavigation();
   
   return (
     <>
@@ -11,7 +11,7 @@ export default function LoginFormHeader() {
       
       <div className="flex justify-center">
         <Button
-          onClick={() => navigate('/register')}
+          onClick={() => goTo('/register')}
           variant="primary"
           size="lg"
         >

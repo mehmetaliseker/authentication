@@ -1,17 +1,18 @@
 import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useRouteParams, useNavigation } from '../hooks/useAuth';
 import ResetPasswordForm from '../components/auth/ResetPasswordForm';
 
 export default function ResetPassword() {
-  const { token } = useParams();
-  const navigate = useNavigate();
+  const { getParam } = useRouteParams();
+  const { goTo } = useNavigation();
+  const token = getParam('token');
 
   const handleSuccess = () => {
-    navigate('/login');
+    goTo('/login');
   };
 
   const handleBack = () => {
-    navigate('/login');
+    goTo('/login');
   };
 
   return (

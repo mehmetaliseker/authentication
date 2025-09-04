@@ -1,12 +1,12 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigation } from '../hooks/useAuth';
 import LogoutContent from '../components/auth/LogoutContent';
 
 export default function Logout() {
-  const navigate = useNavigate();
+  const { goTo } = useNavigation();
 
   const handleBackToLogin = () => {
-    navigate('/login');
+    goTo('/login');
   };
 
   return <LogoutContent onBackToLogin={handleBackToLogin} />;

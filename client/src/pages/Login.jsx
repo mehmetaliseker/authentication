@@ -1,12 +1,12 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigation } from '../hooks/useAuth';
 import LoginForm from '../components/auth/LoginForm';
 
 export default function Login() {
-  const navigate = useNavigate();
+  const { goTo } = useNavigation();
 
   const handleForgotPassword = () => {
-    navigate('/forgot-password');
+    goTo('/forgot-password');
   };
 
   return <LoginForm onForgotPassword={handleForgotPassword} />;

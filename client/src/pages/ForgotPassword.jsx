@@ -1,16 +1,16 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigation } from '../hooks/useAuth';
 import ForgotPasswordForm from '../components/auth/ForgotPasswordForm';
 
 export default function ForgotPassword() {
-  const navigate = useNavigate();
+  const { goTo } = useNavigation();
 
   const handleBack = () => {
-    navigate('/login');
+    goTo('/login');
   };
 
   const handleResetPassword = (token) => {
-    navigate(`/reset-password/${token}`);
+    goTo(`/reset-password/${token}`);
   };
 
   return (
