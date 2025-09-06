@@ -7,7 +7,7 @@ export default function AnimatedForm({ children, className = "" }) {
 
   return (
     <motion.div 
-      className={`bg-white rounded-lg shadow-lg p-6 w-full ${className}`}
+      className={`bg-white/40 backdrop-blur-md rounded-xl shadow-2xl border border-white/20 p-6 w-full ${className}`}
       variants={containerVariants}
       initial="hidden"
       animate="visible"

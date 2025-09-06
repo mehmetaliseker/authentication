@@ -17,7 +17,7 @@ export default function DashboardHeader() {
 
   return (
     <header className="bg-cyan-100/30 backdrop-blur-lg shadow-lg border-b border-cyan-200/40">
-      <div className="container mx-auto px-4 py-4">
+      <div className="container mx-auto px-4 py-4 ">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-cyan-900">Dashboard</h1>

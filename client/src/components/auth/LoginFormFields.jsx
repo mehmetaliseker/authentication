@@ -22,7 +22,7 @@ export default function LoginFormFields({
           type: "spring",
           stiffness: 100
         }}
-        whileHover={{ scale: 1.02, x: 5 }}
+        whileHover={{ scale: 1.02}}
         whileFocus={{ scale: 1.05 }}
       >
         <Input
@@ -46,7 +46,7 @@ export default function LoginFormFields({
           type: "spring",
           stiffness: 100
         }}
-        whileHover={{ scale: 1.02, x: -5 }}
+        whileHover={{ scale: 1.02}}
         whileFocus={{ scale: 1.05 }}
       >
         <Input

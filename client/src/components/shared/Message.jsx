@@ -8,7 +8,7 @@ export default function Message({ message, className = '' }) {
   
   return (
     <div className={`text-center ${className}`}>
-      <p className={`text-sm ${messageClasses}`}>
+      <p className={`text-sm ${messageClasses} bg-white/80 backdrop-blur-sm px-3 py-2 rounded-md border border-white/30`}>
         {message}
       </p>
     </div>
