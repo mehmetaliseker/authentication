@@ -10,6 +10,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Logout from './pages/Logout';
 import Dashboard from './pages/Dashboard';
+import Profile from './pages/Profile';
 import './App.css';
 
 function AppContent() {
@@ -35,6 +36,8 @@ function AppContent() {
         <Route path="/dashboard" element={<DashboardLayout />}>
           <Route index element={<Dashboard />} />
         </Route>
+
+        <Route path="/profile" element={<Profile />} />
       </Routes>
     </Router>
   );

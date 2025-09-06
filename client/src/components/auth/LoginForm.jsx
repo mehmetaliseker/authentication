@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth, useForm, useNavigation } from '../../hooks/useAuth';
 import { Navigate } from 'react-router-dom';
+import AnimatedForm from '../shared/AnimatedForm';
 import LoginFormHeader from './LoginFormHeader';
 import LoginFormFields from './LoginFormFields';
 import LoginFormFooter from './LoginFormFooter';
@@ -29,9 +30,8 @@ export default function LoginForm({ onForgotPassword }) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <AnimatedForm>
       <LoginFormHeader />
-      
       <LoginFormFields
         email={values.email}
         setEmail={(value) => handleChange({ target: { name: 'email', value } })}
@@ -40,11 +40,10 @@ export default function LoginForm({ onForgotPassword }) {
         isLoading={isLoading || isSubmitting}
         onSubmit={handleSubmit}
       />
-      
       <LoginFormFooter
         onForgotPassword={onForgotPassword}
         message={message}
       />
-    </div>
+    </AnimatedForm>
   );
 }

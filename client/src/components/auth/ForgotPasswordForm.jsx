@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import AnimatedForm from '../shared/AnimatedForm';
 import ForgotPasswordFormHeader from './ForgotPasswordFormHeader';
 import ForgotPasswordFormFields from './ForgotPasswordFormFields';
 import ForgotPasswordFormFooter from './ForgotPasswordFormFooter';
@@ -38,20 +39,18 @@ export default function ForgotPasswordForm({ onBack, onResetPassword }) {
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <AnimatedForm>
       <ForgotPasswordFormHeader />
-      
       <ForgotPasswordFormFields
         email={email}
         setEmail={setEmail}
         isLoading={isLoading}
         onSubmit={handleSubmit}
       />
-      
       <ForgotPasswordFormFooter
         onBack={onBack}
         message={message}
       />
-    </div>
+    </AnimatedForm>
   );
 }

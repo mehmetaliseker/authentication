@@ -7,6 +7,7 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(false);
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [justLoggedIn, setJustLoggedIn] = useState(false);
 
   async function login(email, password) {
     setIsLoading(true);
@@ -31,6 +32,7 @@ export function AuthProvider({ children }) {
           // State'i güncelle
           setUser(data.user);
           setIsAuthenticated(true);
+          setJustLoggedIn(true); // Giriş yapıldığını işaretle
           setMessage(`✅ Hoşgeldin ${data.user.first_name || email}!`);
           
           console.log('Login başarılı, state güncellendi:', { user: data.user, isAuthenticated: true });
@@ -127,6 +129,48 @@ export function AuthProvider({ children }) {
     }
   }
 
+  async function updateProfile(profileData) {
+    setIsLoading(true);
+    setMessage('');
+    
+    try {
+      const currentUser = user || JSON.parse(localStorage.getItem('user') || '{}');
+      
+      const response = await fetch('http://localhost:3001/auth/update-profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          userId: currentUser.id,
+          ...profileData 
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        if (data.user) {
+          // Güncellenmiş kullanıcı bilgilerini kaydet
+          setUser(data.user);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          setMessage(data.message || 'Profil başarıyla güncellendi');
+          return true;
+        } else {
+          setMessage(data.message || 'Profil güncellenemedi');
+          return false;
+        }
+      } else {
+        setMessage(data.message || 'Profil güncellenemedi');
+        return false;
+      }
+    } catch (error) {
+      console.error('Update profile error:', error);
+      setMessage('❌ Sunucuya bağlanılamadı. Lütfen tekrar deneyin.');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   // Sayfa yüklendiğinde localStorage'dan kullanıcı bilgilerini yükle
   const checkAuthStatus = useCallback(() => {
     const storedUser = localStorage.getItem('user');
@@ -139,6 +183,7 @@ export function AuthProvider({ children }) {
         const userData = JSON.parse(storedUser);
         setUser(userData);
         setIsAuthenticated(true);
+        setJustLoggedIn(false); // Sayfa yenilendiğinde giriş yapılmış sayılmaz
         console.log('Auth durumu localStorage\'dan yüklendi:', userData);
       } catch (error) {
         console.error('localStorage verisi geçersiz:', error);
@@ -157,9 +202,12 @@ export function AuthProvider({ children }) {
     login,
     register,
     logout,
+    updateProfile,
     isLoading,
     user,
     isAuthenticated,
+    justLoggedIn,
+    setJustLoggedIn,
     checkAuthStatus
   };
 

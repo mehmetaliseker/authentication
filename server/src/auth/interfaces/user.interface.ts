@@ -4,6 +4,8 @@ export interface IUser {
   last_name: string;
   email: string;
   password_hash: string;
+  birth_date?: Date;
+  country?: string;
   is_verified: boolean;
   verification_token?: string;
   failed_attempts: number;

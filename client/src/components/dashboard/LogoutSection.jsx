@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { useAuth, useForm, useNavigation } from '../../hooks/useAuth';
 import LogoutSectionWarning from './LogoutSectionWarning';
 import LogoutSectionButtons from './LogoutSectionButtons';
@@ -22,10 +23,28 @@ export default function LogoutSection() {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-semibold text-gray-800 mb-6">Güvenlik</h2>
+    <motion.div 
+      className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-6 border border-white/20"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.2 }}
+      whileHover={{ scale: 1.02, y: -5 }}
+    >
+      <motion.h2 
+        className="text-2xl font-bold text-white mb-6 text-center"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+      >
+        🔒 Güvenlik
+      </motion.h2>
       
-      <div className="space-y-4">
+      <motion.div 
+        className="space-y-4"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.4 }}
+      >
         <LogoutSectionWarning />
         
         <LogoutSectionButtons
@@ -35,7 +54,7 @@ export default function LogoutSection() {
           onLogout={handleLogout}
           onCancelLogout={handleCancelLogout}
         />
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

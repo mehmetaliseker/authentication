@@ -1,6 +1,8 @@
 import React from 'react';
 import { useRouteParams, useNavigation } from '../hooks/useAuth';
+import AnimatedPage from '../components/shared/AnimatedPage';
 import ResetPasswordForm from '../components/auth/ResetPasswordForm';
+import { pageConfigs } from '../config/pageConfigs';
 
 export default function ResetPassword() {
   const { getParam } = useRouteParams();
@@ -16,10 +18,15 @@ export default function ResetPassword() {
   };
 
   return (
-    <ResetPasswordForm
-      token={token}
-      onSuccess={handleSuccess}
-      onBack={handleBack}
-    />
+    <AnimatedPage 
+      backgroundGradient={pageConfigs.resetPassword.backgroundGradient}
+      circles={pageConfigs.resetPassword.circles}
+    >
+      <ResetPasswordForm
+        token={token}
+        onSuccess={handleSuccess}
+        onBack={handleBack}
+      />
+    </AnimatedPage>
   );
 }

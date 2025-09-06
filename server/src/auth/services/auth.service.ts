@@ -5,6 +5,7 @@ import { LogoutLogRepository } from '../repositories/logout-log.repository';
 import { JwtService } from './jwt.service';
 import { RegisterDto } from '../dtos/register.dto';
 import { LoginDto } from '../dtos/login.dto';
+import { UpdateProfileDto } from '../dtos/update-profile.dto';
 import { IUser } from '../interfaces/user.interface';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
@@ -35,6 +36,8 @@ export class AuthService {
         last_name: dto.last_name,
         email: dto.email,
         password_hash: hash,
+        birth_date: dto.birth_date ? new Date(dto.birth_date) : undefined,
+        country: dto.country,
         is_verified: false // Email doğrulama gerekli
       };
 
@@ -110,6 +113,8 @@ export class AuthService {
           email: user.email,
           first_name: user.first_name,
           last_name: user.last_name,
+          birth_date: user.birth_date,
+          country: user.country,
           is_verified: user.is_verified
         }
       };
@@ -308,6 +313,77 @@ export class AuthService {
 
     } catch (error) {
       throw new UnauthorizedException('Geçersiz refresh token');
+    }
+  }
+
+  async updateProfile(userId: number, dto: UpdateProfileDto): Promise<{ 
+    message: string; 
+    user: Partial<IUser> 
+  }> {
+    try {
+      // Kullanıcıyı bul
+      const user = await this.userRepository.findById(userId);
+      if (!user) {
+        throw new NotFoundException('Kullanıcı bulunamadı');
+      }
+
+      // Email değişikliği kontrolü
+      if (dto.email !== user.email) {
+        const existingUser = await this.userRepository.findByEmail(dto.email);
+        if (existingUser) {
+          throw new ConflictException('Bu email adresi zaten kullanılıyor');
+        }
+      }
+
+      // Şifre değişikliği kontrolü
+      if (dto.password) {
+        // Son 3 şifreyi kontrol et
+        const passwordHistory = await this.userRepository.getPasswordHistory(userId);
+        for (const oldHash of passwordHistory) {
+          const isSame = await bcrypt.compare(dto.password, oldHash);
+          if (isSame) {
+            throw new BadRequestException('Yeni şifre son 3 şifreden biriyle aynı olamaz');
+          }
+        }
+      }
+
+      // Güncelleme verilerini hazırla
+      const updateData: Partial<IUser> = {
+        first_name: dto.first_name,
+        last_name: dto.last_name,
+        email: dto.email,
+        birth_date: dto.birth_date ? new Date(dto.birth_date) : undefined,
+        country: dto.country
+      };
+
+      // Şifre güncelleniyorsa hash'le ve geçmişe ekle
+      if (dto.password) {
+        const newPasswordHash = await bcrypt.hash(dto.password, 12);
+        updateData.password_hash = newPasswordHash;
+      }
+
+      // Kullanıcıyı güncelle
+      const updatedUser = await this.userRepository.update(userId, updateData);
+
+      // Şifre güncelleniyorsa geçmişe ekle
+      if (dto.password && updateData.password_hash) {
+        await this.userRepository.addPasswordToHistory(userId, updateData.password_hash);
+      }
+
+      // Hassas bilgileri çıkar
+      const { password_hash, ...result } = updatedUser;
+      return {
+        message: 'Profil başarıyla güncellendi',
+        user: result
+      };
+
+    } catch (error) {
+      if (error instanceof NotFoundException || 
+          error instanceof ConflictException || 
+          error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Profil güncelleme sırasında bir hata oluştu');
     }
   }
 }

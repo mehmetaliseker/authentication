@@ -1,6 +1,8 @@
 import React from 'react';
 import { useNavigation } from '../hooks/useAuth';
+import AnimatedPage from '../components/shared/AnimatedPage';
 import ForgotPasswordForm from '../components/auth/ForgotPasswordForm';
+import { pageConfigs } from '../config/pageConfigs';
 
 export default function ForgotPassword() {
   const { goTo } = useNavigation();
@@ -14,9 +16,14 @@ export default function ForgotPassword() {
   };
 
   return (
-    <ForgotPasswordForm 
-      onBack={handleBack} 
-      onResetPassword={handleResetPassword} 
-    />
+    <AnimatedPage 
+      backgroundGradient={pageConfigs.forgotPassword.backgroundGradient}
+      circles={pageConfigs.forgotPassword.circles}
+    >
+      <ForgotPasswordForm 
+        onBack={handleBack} 
+        onResetPassword={handleResetPassword} 
+      />
+    </AnimatedPage>
   );
 }

@@ -14,7 +14,7 @@ export default function ApiStatus() {
   };
 
   return (
-    <div className="mb-6">
+    <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20">
       {apiStatus && (
         <p className={`text-center text-sm ${
           apiStatus.includes('✅') ? 'text-green-600' : 'text-red-500'

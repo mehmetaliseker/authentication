@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import AnimatedForm from '../shared/AnimatedForm';
 import ResetPasswordFormHeader from './ResetPasswordFormHeader';
 import ResetPasswordFormFields from './ResetPasswordFormFields';
 import ResetPasswordFormFooter from './ResetPasswordFormFooter';
@@ -43,9 +44,8 @@ export default function ResetPasswordForm({ token, onSuccess, onBack }) {
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <AnimatedForm>
       <ResetPasswordFormHeader />
-      
       <ResetPasswordFormFields
         password={password}
         setPassword={setPassword}
@@ -54,11 +54,10 @@ export default function ResetPasswordForm({ token, onSuccess, onBack }) {
         isLoading={isLoading}
         onSubmit={handleSubmit}
       />
-      
       <ResetPasswordFormFooter
         onBack={onBack}
         message={message}
       />
-    </div>
+    </AnimatedForm>
   );
 }

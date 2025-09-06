@@ -17,27 +17,14 @@ CREATE INDEX IF NOT EXISTS idx_password_resets_expires_at ON public.password_res
 CREATE INDEX IF NOT EXISTS idx_password_resets_used ON public.password_resets(used);
 CREATE INDEX IF NOT EXISTS idx_password_resets_created_at ON public.password_resets(created_at);
 
--- Constraint'ler ekle (eğer yoksa)
-DO $$ 
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint 
-        WHERE conname = 'chk_expires_at_future'
-    ) THEN
-        ALTER TABLE public.password_resets 
-        ADD CONSTRAINT chk_expires_at_future 
-        CHECK (expires_at > created_at);
-    END IF;
-    
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint 
-        WHERE conname = 'chk_reset_token_length'
-    ) THEN
-        ALTER TABLE public.password_resets 
-        ADD CONSTRAINT chk_reset_token_length 
-        CHECK (LENGTH(reset_token) >= 32);
-    END IF;
-END $$;
+-- Constraint'ler ekle
+ALTER TABLE public.password_resets 
+ADD CONSTRAINT chk_expires_at_future 
+CHECK (expires_at > created_at);
+
+ALTER TABLE public.password_resets 
+ADD CONSTRAINT chk_reset_token_length 
+CHECK (LENGTH(reset_token) >= 32);
 
 -- Tablo ve kolon yorumları ekle
 COMMENT ON TABLE public.password_resets IS 'Şifre sıfırlama işlemlerini saklar';

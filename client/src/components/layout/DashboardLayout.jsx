@@ -22,9 +22,9 @@ export default function DashboardLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="h-screen">
       <DashboardHeader />
-      <main className="container mx-auto px-4 py-8">
+      <main className="h-full">
         <Outlet />
       </main>
     </div>

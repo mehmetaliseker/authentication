@@ -8,7 +8,7 @@ export class UserRepository implements IUserRepository {
 
   async findByEmail(email: string): Promise<IUser | null> {
     const query = `
-      SELECT id, first_name, last_name, email, password_hash, is_verified, 
+      SELECT id, first_name, last_name, email, password_hash, birth_date, country, is_verified, 
              verification_token, failed_attempts, account_locked, 
              last_login, locked_until, created_at, updated_at
       FROM users 
@@ -21,7 +21,7 @@ export class UserRepository implements IUserRepository {
 
   async findById(id: number): Promise<IUser | null> {
     const query = `
-      SELECT id, first_name, last_name, email, password_hash, is_verified, 
+      SELECT id, first_name, last_name, email, password_hash, birth_date, country, is_verified, 
              verification_token, failed_attempts, account_locked, 
              last_login, locked_until, created_at, updated_at
       FROM users 
@@ -34,9 +34,9 @@ export class UserRepository implements IUserRepository {
 
   async create(userData: Partial<IUser>): Promise<IUser> {
     const query = `
-      INSERT INTO users (first_name, last_name, email, password_hash, is_verified, verification_token)
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING id, first_name, last_name, email, password_hash, is_verified, 
+      INSERT INTO users (first_name, last_name, email, password_hash, birth_date, country, is_verified, verification_token)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING id, first_name, last_name, email, password_hash, birth_date, country, is_verified, 
                 verification_token, failed_attempts, account_locked, 
                 last_login, locked_until, created_at, updated_at
     `;
@@ -46,6 +46,8 @@ export class UserRepository implements IUserRepository {
       userData.last_name || '',
       userData.email,
       userData.password_hash,
+      userData.birth_date || null,
+      userData.country || null,
       userData.is_verified || false,
       userData.verification_token || null
     ];
@@ -79,7 +81,7 @@ export class UserRepository implements IUserRepository {
       UPDATE users 
       SET ${fields.join(', ')}
       WHERE id = $${paramIndex}
-      RETURNING id, first_name, last_name, email, password_hash, is_verified, 
+      RETURNING id, first_name, last_name, email, password_hash, birth_date, country, is_verified, 
                 verification_token, failed_attempts, account_locked, 
                 last_login, locked_until, created_at, updated_at
     `;

@@ -18,20 +18,6 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
 CREATE INDEX IF NOT EXISTS idx_users_verification_token ON public.users(verification_token);
 CREATE INDEX IF NOT EXISTS idx_users_created_at ON public.users(created_at);
 
--- Updated_at için trigger oluştur
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
-
-CREATE TRIGGER update_users_updated_at 
-    BEFORE UPDATE ON public.users 
-    FOR EACH ROW 
-    EXECUTE FUNCTION update_updated_at_column();
-
 -- Tablo yorumu ekle
 COMMENT ON TABLE public.users IS 'Kullanıcı bilgilerini saklar';
 COMMENT ON COLUMN public.users.email IS 'Benzersiz email adresi';

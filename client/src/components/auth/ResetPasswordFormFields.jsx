@@ -20,6 +20,7 @@ export default function ResetPasswordFormFields({
         required
         disabled={isLoading}
         autoComplete="new-password"
+        className="w-full"
       />
 
       <Input
@@ -30,12 +31,14 @@ export default function ResetPasswordFormFields({
         required
         disabled={isLoading}
         autoComplete="new-password"
+        className="w-full"
       />
 
       <Button
         type="submit"
         variant="primary"
         disabled={isLoading}
+        className="w-full"
       >
         {isLoading ? 'Sıfırlanıyor...' : 'Şifreyi Sıfırla'}
       </Button>

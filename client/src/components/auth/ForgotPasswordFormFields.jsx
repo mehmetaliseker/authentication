@@ -18,12 +18,14 @@ export default function ForgotPasswordFormFields({
         required
         disabled={isLoading}
         autoComplete="email"
+        className="w-full"
       />
 
       <Button
         type="submit"
         variant="primary"
         disabled={isLoading}
+        className="w-full"
       >
         {isLoading ? 'Gönderiliyor...' : 'Şifre Sıfırlama Linki Gönder'}
       </Button>
