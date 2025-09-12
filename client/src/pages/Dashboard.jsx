@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 import UserInfo from '../components/dashboard/UserInfo';
 import LogoutSection from '../components/dashboard/LogoutSection';
 import WelcomeMessage from '../components/shared/WelcomeMessage';
+import { DashboardSkeleton } from '../components/shared/Skeleton';
 
 function Dashboard() {
   const { user, justLoggedIn, setJustLoggedIn } = useAuth();
@@ -75,7 +76,7 @@ function Dashboard() {
 
       {/* Content */}
       <motion.div 
-        className="relative z-10 h-full flex flex-col justify-center items-center p-8"
+        className="relative z-10 h-full flex flex-col justify-center items-center p-8 pt-24"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}

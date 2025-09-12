@@ -24,18 +24,24 @@ export function AuthProvider({ children }) {
       
       if (response.ok) {
         if (data.accessToken && data.user) {
+          // lastLogin alanını güncelle
+          const userWithLastLogin = {
+            ...data.user,
+            lastLogin: new Date().toISOString()
+          };
+          
           // Önce localStorage'a kaydet
           localStorage.setItem('accessToken', data.accessToken);
           localStorage.setItem('refreshToken', data.refreshToken);
-          localStorage.setItem('user', JSON.stringify(data.user));
+          localStorage.setItem('user', JSON.stringify(userWithLastLogin));
           
           // State'i güncelle
-          setUser(data.user);
+          setUser(userWithLastLogin);
           setIsAuthenticated(true);
           setJustLoggedIn(true); // Giriş yapıldığını işaretle
           setMessage(`✅ Hoşgeldin ${data.user.first_name || email}!`);
           
-          console.log('Login başarılı, state güncellendi:', { user: data.user, isAuthenticated: true });
+          console.log('Login başarılı, state güncellendi:', { user: userWithLastLogin, isAuthenticated: true });
           
           return true;
         } else {
@@ -181,6 +187,11 @@ export function AuthProvider({ children }) {
     if (storedUser && storedToken) {
       try {
         const userData = JSON.parse(storedUser);
+        // Eğer lastLogin yoksa, şu anki zamanı ata
+        if (!userData.lastLogin) {
+          userData.lastLogin = new Date().toISOString();
+          localStorage.setItem('user', JSON.stringify(userData));
+        }
         setUser(userData);
         setIsAuthenticated(true);
         setJustLoggedIn(false); // Sayfa yenilendiğinde giriş yapılmış sayılmaz
@@ -197,12 +208,18 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const updateUser = useCallback((updatedUser) => {
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+  }, []);
+
   const value = {
     message,
     login,
     register,
     logout,
     updateProfile,
+    updateUser,
     isLoading,
     user,
     isAuthenticated,

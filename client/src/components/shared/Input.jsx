@@ -11,7 +11,7 @@ export default function Input({
   className = '',
   ...props 
 }) {
-  const baseClasses = 'px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 opacity-40 backdrop-blur-sm border-white/30';
+  const baseClasses = 'px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200';
   const disabledClasses = disabled ? 'opacity-50 cursor-not-allowed' : '';
   
   const classes = `${baseClasses} ${disabledClasses} ${className}`;

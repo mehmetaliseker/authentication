@@ -22,7 +22,7 @@ export default function DashboardLayout() {
   }
 
   return (
-    <div className="h-screen">
+    <div className="h-screen overflow-hidden">
       <DashboardHeader />
       <main className="h-full">
         <Outlet />
