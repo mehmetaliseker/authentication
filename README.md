@@ -13,6 +13,10 @@ Bu proje, modern bir authentication sistemi içeren full-stack uygulamadır.
 ```bash
 cd server
 npm install
+
+# Environment variables'ları ayarlayın
+cp ENV_SETUP.md .env  # ENV_SETUP.md dosyasındaki rehberi takip edin
+
 npm run start:dev
 ```
 
@@ -31,10 +35,17 @@ npm run dev
 - PostgreSQL veritabanı
 - Modern React frontend
 - Responsive tasarım
+- **Google Search API entegrasyonu** - Dashboard'da arama motoru
+- Todo yönetim sistemi
 
 ## Teknolojiler
 
-- **Backend**: NestJS, PostgreSQL, JWT
-- **Frontend**: React, Vite, Tailwind CSS
+- **Backend**: NestJS, PostgreSQL, JWT, Google Search API
+- **Frontend**: React, Vite, Tailwind CSS, Framer Motion
 - **Veritabanı**: PostgreSQL
 - **Authentication**: JWT, bcrypt
+- **Search**: Google Custom Search API
+
+## Google Search API Kurulumu
+
+Google Search API'yi kullanabilmek için `server/ENV_SETUP.md` dosyasındaki rehberi takip edin ve gerekli environment variable'ları ayarlayın.
