@@ -121,6 +121,7 @@ export class TodosRepository {
       SET status = 'deleted', deleted_at = CURRENT_TIMESTAMP
       WHERE status = 'completed' 
       AND completed_at < NOW() - INTERVAL '12 hours'
+      AND status != 'deleted'
       RETURNING id
     `;
     const result = await this.databaseService.query(query);

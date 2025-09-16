@@ -104,11 +104,11 @@ export class TodosController {
     }
 
     try {
-      const success = await this.todosService.remove(+id, userId);
-      if (!success) {
+      const todo = await this.todosService.softDelete(+id, userId);
+      if (!todo) {
         return { success: false, message: 'Todo bulunamadı' };
       }
-      return { success: true, message: 'Todo başarıyla silindi' };
+      return { success: true, data: todo, message: 'Todo silindi' };
     } catch (error) {
       return { success: false, message: 'Todo silinemedi', error: error.message };
     }

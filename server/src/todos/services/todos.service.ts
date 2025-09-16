@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { TodosRepository } from '../repositories/todos.repository';
 import { Todo, CreateTodoDto, UpdateTodoDto, TodoFilter } from '../interfaces/todo.interface';
 
@@ -49,10 +50,13 @@ export class TodosService {
   }
 
   // Cron job için - 12 saat sonra completed olanları sil
+  @Cron(CronExpression.EVERY_30_MINUTES)
   async cleanupOldCompleted(): Promise<void> {
     try {
       const deletedCount = await this.autoDeleteOldCompleted();
-      console.log(`Cleaned up ${deletedCount} old completed todos`);
+      if (deletedCount > 0) {
+        console.log(`Cleaned up ${deletedCount} old completed todos`);
+      }
     } catch (error) {
       console.error('Error cleaning up old completed todos:', error);
     }

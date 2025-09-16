@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { TodosController } from './controllers/todos.controller';
 import { TodosService } from './services/todos.service';
 import { TodosRepository } from './repositories/todos.repository';
@@ -6,7 +7,7 @@ import { JwtService } from '../auth/services/jwt.service';
 import { DatabaseModule } from '../database/database.module';
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, ScheduleModule.forRoot()],
   controllers: [TodosController],
   providers: [TodosService, TodosRepository, JwtService],
   exports: [TodosService],

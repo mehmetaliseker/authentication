@@ -142,30 +142,19 @@ const TodoModal = ({ isOpen, onClose }) => {
     }
   }, [isOpen, filter]);
 
-  // 12 saat sonra otomatik silme kontrolü
+  // 12 saat sonra otomatik silme kontrolü - backend'te yapılıyor, frontend sadece listeyi yeniler
   useEffect(() => {
-    const checkOldCompleted = () => {
-      const now = new Date();
-      const updatedTodos = todos.map(todo => {
-        if (todo.status === 'completed' && todo.completed_at) {
-          const completedTime = new Date(todo.completed_at);
-          const hoursDiff = (now - completedTime) / (1000 * 60 * 60);
-          
-          if (hoursDiff >= 12) {
-            return { ...todo, status: 'deleted' };
-          }
-        }
-        return todo;
-      });
-      
-      if (JSON.stringify(updatedTodos) !== JSON.stringify(todos)) {
-        setTodos(updatedTodos);
+    const checkAndReloadTodos = () => {
+      // Backend otomatik olarak completed todo'ları 12 saat sonra deleted yapar
+      // Frontend sadece listeyi yeniden yükler
+      if (isOpen) {
+        loadTodos();
       }
     };
 
-    const interval = setInterval(checkOldCompleted, 60000); // Her dakika kontrol et
+    const interval = setInterval(checkAndReloadTodos, 300000); // Her 5 dakikada bir kontrol et
     return () => clearInterval(interval);
-  }, [todos]);
+  }, [isOpen, filter]);
 
   const filteredTodos = todos.filter(todo => {
     switch (filter) {
@@ -291,10 +280,13 @@ const TodoModal = ({ isOpen, onClose }) => {
                     transition={{ duration: 0.3 }}
                   >
                     <button
-                      onClick={() => toggleTodo(todo.id)}
+                      onClick={() => todo.status !== 'deleted' ? toggleTodo(todo.id) : null}
+                      disabled={todo.status === 'deleted'}
                       className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0 mt-0.5 ${
                         todo.status === 'completed'
                           ? 'bg-green-500 border-green-500 text-white'
+                          : todo.status === 'deleted'
+                          ? 'border-red-500 bg-red-500/20 cursor-not-allowed'
                           : 'border-slate-400 hover:border-slate-300'
                       }`}
                     >
@@ -303,11 +295,17 @@ const TodoModal = ({ isOpen, onClose }) => {
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
                       )}
+                      {todo.status === 'deleted' && (
+                        <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      )}
                     </button>
                     
                     <div className="flex-1 min-w-0">
                       <p className={`text-slate-200 break-words ${
-                        todo.status === 'completed' ? 'line-through opacity-60' : ''
+                        todo.status === 'completed' ? 'line-through opacity-60' : 
+                        todo.status === 'deleted' ? 'line-through opacity-40 text-red-300' : ''
                       }`}>
                         {todo.title}
                       </p>
@@ -316,16 +314,23 @@ const TodoModal = ({ isOpen, onClose }) => {
                           Tamamlandı: {new Date(todo.completed_at).toLocaleString('tr-TR')}
                         </p>
                       )}
+                      {todo.deleted_at && todo.status === 'deleted' && (
+                        <p className="text-xs text-slate-400 mt-1">
+                          Silindi: {new Date(todo.deleted_at).toLocaleString('tr-TR')}
+                        </p>
+                      )}
                     </div>
                     
-                    <button
-                      onClick={() => deleteTodo(todo.id)}
-                      className="text-red-400 hover:text-red-300 transition-colors p-1"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
+                    {todo.status !== 'deleted' && (
+                      <button
+                        onClick={() => deleteTodo(todo.id)}
+                        className="text-red-400 hover:text-red-300 transition-colors p-1"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    )}
                   </motion.div>
                 ))
               )}
