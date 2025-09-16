@@ -12,7 +12,7 @@ export default function LoginFormHeader() {
       <div className="flex justify-center">
         <Button
           onClick={() => goTo('/register')}
-          variant="primary"
+          variant="register"
           size="lg"
         >
           Kayıt Ol

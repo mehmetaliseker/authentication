@@ -178,7 +178,7 @@ export default function RegisterFormFields({
       >
         <Button
           type="submit"
-          variant="primary"
+          variant="register"
           disabled={isLoading}
           className="w-full"
         >

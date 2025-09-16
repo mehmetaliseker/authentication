@@ -190,9 +190,9 @@ export default function RegisterForm() {
         <motion.div>
           <Button
             type="submit"
-            variant="primary"
+            variant="register"
             disabled={isLoading || isSubmitting}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-all duration-200"
+            className="w-full py-3 rounded-lg font-medium transition-all duration-200"
           >
             {isLoading || isSubmitting ? 'Kayıt oluşturuluyor...' : 'Kayıt Ol'}
           </Button>
