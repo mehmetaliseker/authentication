@@ -174,15 +174,16 @@ const TodoModal = ({ isOpen, onClose }) => {
   return (
     <AnimatePresence>
       <motion.div
-        className="fixed inset-0 z-40 flex items-center justify-center bg-black/90 backdrop-blur-md"
+        className="fixed z-50 flex items-center justify-center"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        style={{ top: '315px', left: 0, right: 0, bottom: '100px' }}
+        style={{ top: '120px', left: '50%', transform: 'translateX(-50%)' }}
       >
         <motion.div
-          className="bg-slate-800/90 backdrop-blur-lg rounded-2xl shadow-2xl border border-slate-600/30 w-full max-w-2xl h-[70vh] overflow-hidden mx-4"
+            className="bg-slate-800/90 backdrop-blur-lg rounded-2xl shadow-2xl border border-slate-600/30 h-[75vh] overflow-hidden mx-4"
+            style={{ width: '900px', maxWidth: '40vw' }}
           initial={{ scale: 0.9, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: 20 }}
