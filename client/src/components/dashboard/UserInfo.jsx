@@ -1,13 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../hooks/useAuth';
 import { UserInfoSkeleton } from '../shared/Skeleton';
+import SaveIcon from '../../assets/save-icon.svg';
 
 export default function UserInfo() {
   const { user, updateUser } = useAuth();
   const [editingField, setEditingField] = useState(null);
   const [editValues, setEditValues] = useState({});
   const [isUpdating, setIsUpdating] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showTooltip, setShowTooltip] = useState(false);
+  const tooltipTimeoutRef = useRef(null);
 
   if (!user) {
     return <UserInfoSkeleton />;
@@ -50,6 +54,8 @@ export default function UserInfo() {
 
   const handleEdit = (field) => {
     setEditingField(field);
+    setHasUnsavedChanges(false);
+    setShowTooltip(false);
     let value = user[field] || '';
     
     // Doğum tarihi için özel format - timezone sorununu çöz
@@ -68,6 +74,7 @@ export default function UserInfo() {
   const handleSave = async (field) => {
     if (editValues[field] === user[field]) {
       setEditingField(null);
+      setHasUnsavedChanges(false);
       return;
     }
 
@@ -86,19 +93,20 @@ export default function UserInfo() {
       if (actualAge < 18) {
         alert('18 yaşından küçük kullanıcılar için doğum tarihi güncellenemez.');
         setEditingField(null);
+        setHasUnsavedChanges(false);
         return;
       }
     }
 
     setIsUpdating(true);
     try {
-      // Doğum tarihi için özel format
+      // Doğum tarihi 
       let valueToSend = editValues[field];
       if (field === 'birth_date') {
-        // Tarih formatını düzelt - timezone sorununu çöz
+        
         if (valueToSend) {
-          // Direkt olarak seçilen tarihi kullan (timezone dönüşümü yapma)
-          valueToSend = valueToSend; // Zaten YYYY-MM-DD formatında
+          
+          valueToSend = valueToSend; 
         }
       }
 
@@ -119,6 +127,7 @@ export default function UserInfo() {
         if (data.user) {
           updateUser(data.user);
           setEditingField(null);
+          setHasUnsavedChanges(false);
         } else {
           alert('Güncelleme başarısız oldu');
         }
@@ -139,6 +148,40 @@ export default function UserInfo() {
       handleSave(field);
     }
   };
+
+  const handleInputChange = (field, value) => {
+    setEditValues({ ...editValues, [field]: value });
+    setHasUnsavedChanges(value !== user[field]);
+  };
+
+  const handleBlur = (field) => {
+    if (hasUnsavedChanges) {
+      setShowTooltip(true);
+      if (tooltipTimeoutRef.current) {
+        clearTimeout(tooltipTimeoutRef.current);
+      }
+      tooltipTimeoutRef.current = setTimeout(() => {
+        setShowTooltip(false);
+      }, 3000);
+    } else {
+      setEditingField(null);
+    }
+  };
+
+  const handleCancel = (field) => {
+    setEditingField(null);
+    setHasUnsavedChanges(false);
+    setShowTooltip(false);
+    setEditValues({ ...editValues, [field]: user[field] || '' });
+  };
+
+  useEffect(() => {
+    return () => {
+      if (tooltipTimeoutRef.current) {
+        clearTimeout(tooltipTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const EditableField = ({ field, label, value, type = 'text', disabled = false }) => {
     // Doğum tarihi için özel değer formatı
@@ -161,15 +204,27 @@ export default function UserInfo() {
             {label}
           </label>
           {!disabled && (
-            <button
-              onClick={() => handleEdit(field)}
-              className="p-1 hover:bg-white/10 rounded transition-colors"
-              disabled={isUpdating}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-white/60 hover:text-white">
-                <path d="M14.3601 4.07866L15.2869 3.15178C16.8226 1.61607 19.3125 1.61607 20.8482 3.15178C22.3839 4.68748 22.3839 7.17735 20.8482 8.71306L19.9213 9.63993M14.3601 4.07866C14.3601 4.07866 14.4759 6.04828 16.2138 7.78618C17.9517 9.52407 19.9213 9.63993 19.9213 9.63993M14.3601 4.07866L5.83882 12.5999C5.26166 13.1771 4.97308 13.4656 4.7249 13.7838C4.43213 14.1592 4.18114 14.5653 3.97634 14.995C3.80273 15.3593 3.67368 15.7465 3.41556 16.5208L2.32181 19.8021M19.9213 9.63993L11.4001 18.1612C10.8229 18.7383 10.5344 19.0269 10.2162 19.2751C9.84082 19.5679 9.43469 19.8189 9.00498 20.0237C8.6407 20.1973 8.25352 20.3263 7.47918 20.5844L4.19792 21.6782M4.19792 21.6782L3.39584 21.9456C3.01478 22.0726 2.59466 21.9734 2.31063 21.6894C2.0266 21.4053 1.92743 20.9852 2.05445 20.6042L2.32181 19.8021M4.19792 21.6782L2.32181 19.8021" stroke="currentColor" strokeWidth="1.5"/>
-              </svg>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleEdit(field)}
+                className="p-1 hover:bg-white/10 rounded transition-colors"
+                disabled={isUpdating}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-white/60 hover:text-white">
+                  <path d="M14.3601 4.07866L15.2869 3.15178C16.8226 1.61607 19.3125 1.61607 20.8482 3.15178C22.3839 4.68748 22.3839 7.17735 20.8482 8.71306L19.9213 9.63993M14.3601 4.07866C14.3601 4.07866 14.4759 6.04828 16.2138 7.78618C17.9517 9.52407 19.9213 9.63993 19.9213 9.63993M14.3601 4.07866L5.83882 12.5999C5.26166 13.1771 4.97308 13.4656 4.7249 13.7838C4.43213 14.1592 4.18114 14.5653 3.97634 14.995C3.80273 15.3593 3.67368 15.7465 3.41556 16.5208L2.32181 19.8021M19.9213 9.63993L11.4001 18.1612C10.8229 18.7383 10.5344 19.0269 10.2162 19.2751C9.84082 19.5679 9.43469 19.8189 9.00498 20.0237C8.6407 20.1973 8.25352 20.3263 7.47918 20.5844L4.19792 21.6782M4.19792 21.6782L3.39584 21.9456C3.01478 22.0726 2.59466 21.9734 2.31063 21.6894C2.0266 21.4053 1.92743 20.9852 2.05445 20.6042L2.32181 19.8021M4.19792 21.6782L2.32181 19.8021" stroke="currentColor" strokeWidth="1.5"/>
+                </svg>
+              </button>
+              {editingField === field && (
+                <button
+                  onClick={() => handleSave(field)}
+                  className="p-1 text-white hover:bg-white/10 rounded transition-colors"
+                  disabled={isUpdating}
+                  title="Kaydet"
+                >
+                  <img src={SaveIcon} alt="Kaydet" width="16" height="16" className="text-white/60 hover:text-white" />
+                </button>
+              )}
+            </div>
           )}
         </div>
         
@@ -178,9 +233,9 @@ export default function UserInfo() {
                       <input
                         type={type}
                         value={editValues[field] || ''}
-                        onChange={(e) => setEditValues({ ...editValues, [field]: e.target.value })}
+                        onChange={(e) => handleInputChange(field, e.target.value)}
                         onKeyPress={(e) => handleKeyPress(e, field)}
-                        onBlur={() => handleSave(field)}
+                        onBlur={() => handleBlur(field)}
                         className="w-full text-white bg-white/20 p-3 rounded-lg border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
                         autoFocus
                         disabled={isUpdating}
@@ -188,6 +243,12 @@ export default function UserInfo() {
                       {isUpdating && (
                         <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                           <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                        </div>
+                      )}
+                      {showTooltip && hasUnsavedChanges && (
+                        <div className="absolute top-full left-0 mt-2 bg-yellow-600 text-white text-sm px-3 py-2 rounded-lg shadow-lg z-10 whitespace-nowrap">
+                          Kaydedilmediğiniz değişiklikler var
+                          <div className="absolute -top-1 left-4 w-2 h-2 bg-yellow-600 transform rotate-45"></div>
                         </div>
                       )}
                     </div>
