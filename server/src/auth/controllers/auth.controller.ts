@@ -5,6 +5,7 @@ import { LoginDto } from '../dtos/login.dto';
 import { ForgotPasswordDto } from '../dtos/forgot-password.dto';
 import { ResetPasswordDto } from '../dtos/reset-password.dto';
 import { UpdateProfileDto } from '../dtos/update-profile.dto';
+import { GoogleAuthDto } from '../dtos/google-auth.dto';
 import type { Request } from 'express';
 
 @Controller('auth')
@@ -51,5 +52,12 @@ export class AuthController {
   @Put('update-profile')
   updateProfile(@Body() dto: UpdateProfileDto & { userId: number }) {
     return this.authService.updateProfile(dto.userId, dto);
+  }
+
+  @Post('google')
+  googleAuth(@Body() dto: GoogleAuthDto, @Req() req: Request) {
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.get('User-Agent');
+    return this.authService.googleAuth(dto, ipAddress, userAgent);
   }
 }

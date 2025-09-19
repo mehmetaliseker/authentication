@@ -12,16 +12,18 @@ export class GoogleSearchService implements ISearchService {
     this.searchEngineId = process.env.GOOGLE_SEARCH_ENGINE_ID || '017576662512468239146:omuauf_lfve';
     
     if (!this.apiKey) {
-      console.warn('SEARCH_ENGINE_API_KEY environment variable is missing');
-      throw new Error('Google Search API key yapılandırması eksik. Lütfen .env dosyasını kontrol edin.');
+      console.warn('⚠️  SEARCH_ENGINE_API_KEY environment variable is missing. Search functionality disabled.');
     }
-    if (!this.searchEngineId) {
-      console.warn('GOOGLE_SEARCH_ENGINE_ID environment variable is missing');
-      throw new Error('Google Search Engine ID yapılandırması eksik. Lütfen .env dosyasını kontrol edin.');
+    if (!this.searchEngineId && this.apiKey) {
+      console.warn('⚠️  GOOGLE_SEARCH_ENGINE_ID environment variable is missing. Search functionality disabled.');
     }
   }
 
   public async search(query: string): Promise<ISearchResponse> {
+    if (!this.apiKey) {
+      throw new Error('Google Search API key yapılandırması eksik. Lütfen .env dosyasını kontrol edin.');
+    }
+    
     try {
       const url = this.buildSearchUrl(query);
       const response = await fetch(url);

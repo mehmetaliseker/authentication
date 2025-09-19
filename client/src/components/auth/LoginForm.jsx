@@ -6,9 +6,10 @@ import Input from '../shared/Input';
 import Button from '../shared/Button';
 import { FormSkeleton } from '../shared/Skeleton';
 import Message from '../shared/Message';
+import { auth, googleProvider, signInWithPopup } from '../../config/firebase';
 
 export default function LoginForm({ onForgotPassword }) {
-  const { message, login, isLoading, isAuthenticated } = useAuth();
+  const { message, login, isLoading, isAuthenticated, checkAuthStatus } = useAuth();
   const { goTo } = useNavigation();
   const { values, handleChange, isSubmitting, setIsSubmitting } = useForm({
     email: '',
@@ -24,6 +25,89 @@ export default function LoginForm({ onForgotPassword }) {
       goTo('/dashboard', { replace: true });
     }
     setIsSubmitting(false);
+  };
+
+  const handleGoogleLogin = async () => {
+    setIsSubmitting(true);
+    try {
+      console.log('Google login başlatılıyor...');
+      
+      // Firebase auth durumunu kontrol et
+      if (!auth || !googleProvider) {
+        throw new Error('Firebase Authentication yapılandırması eksik');
+      }
+      
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      
+      console.log('Google login başarılı:', {
+        email: user.email,
+        displayName: user.displayName,
+        emailVerified: user.emailVerified
+      });
+      
+      // Google ID token'ı al
+      const idToken = await user.getIdToken();
+      console.log('ID Token alındı');
+      
+      // Backend'e Google token'ı gönder
+      const response = await fetch('http://localhost:3001/auth/google', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          idToken,
+          email: user.email,
+          firstName: user.displayName?.split(' ')[0] || '',
+          lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
+          photoURL: user.photoURL
+        }),
+      });
+
+      const data = await response.json();
+      console.log('Backend response:', data);
+      
+      if (data.success) {
+        // Token'ları localStorage'a kaydet
+        localStorage.setItem('accessToken', data.tokens.accessToken);
+        localStorage.setItem('refreshToken', data.tokens.refreshToken);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        console.log('Giriş başarılı, AuthContext güncelleniyor...');
+        
+        // AuthContext'i güncelle - checkAuthStatus çağır
+        checkAuthStatus();
+        
+        console.log('Dashboard\'a yönlendiriliyor');
+        // Dashboard'a yönlendir
+        goTo('/dashboard', { replace: true });
+      } else {
+        console.error('Google login failed:', data.message);
+        alert('Giriş başarısız: ' + data.message);
+      }
+    } catch (error) {
+      console.error('Google login error:', error);
+      
+      // Hata türüne göre daha detaylı mesaj
+      if (error.code === 'auth/popup-closed-by-user') {
+        console.log('Popup kullanıcı tarafından kapatıldı');
+      } else if (error.code === 'auth/popup-blocked') {
+        alert('Popup engellendi. Lütfen popup engelleyiciyi devre dışı bırakın.');
+      } else if (error.code === 'auth/unauthorized-domain') {
+        alert('Bu domain Firebase\'de yetkilendirilmemiş. Firebase Console\'da authorized domains\'e ekleyin.');
+      } else if (error.code === 'auth/configuration-not-found') {
+        alert('Firebase Authentication yapılandırması bulunamadı. Firebase Console\'da Authentication\'ı etkinleştirin.');
+      } else if (error.code === 'auth/operation-not-allowed') {
+        alert('Google Sign-In provider Firebase Console\'da etkinleştirilmemiş.');
+      } else if (error.message?.includes('The requested action is invalid')) {
+        alert('Firebase Console\'da Authentication > Sign-in method > Google provider\'ını etkinleştirin.');
+      } else {
+        alert('Google ile giriş hatası: ' + (error.message || error.code));
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isAuthenticated) {
@@ -126,8 +210,9 @@ export default function LoginForm({ onForgotPassword }) {
           <Button
             type="button"
             variant="secondary"
+            onClick={handleGoogleLogin}
             className="w-full bg-white border border-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-50 transition-all duration-200 flex items-center justify-center"
-            disabled
+            disabled={isLoading || isSubmitting}
           >
             <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

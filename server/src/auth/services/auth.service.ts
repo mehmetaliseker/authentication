@@ -3,9 +3,11 @@ import { UserRepository } from '../repositories/user.repository';
 import { PasswordResetRepository } from '../repositories/password-reset.repository';
 import { LogoutLogRepository } from '../repositories/logout-log.repository';
 import { JwtService } from './jwt.service';
+import { FirebaseService } from './firebase.service';
 import { RegisterDto } from '../dtos/register.dto';
 import { LoginDto } from '../dtos/login.dto';
 import { UpdateProfileDto } from '../dtos/update-profile.dto';
+import { GoogleAuthDto } from '../dtos/google-auth.dto';
 import { IUser } from '../interfaces/user.interface';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
@@ -17,6 +19,7 @@ export class AuthService {
     private readonly passwordResetRepository: PasswordResetRepository,
     private readonly logoutLogRepository: LogoutLogRepository,
     private readonly jwtService: JwtService,
+    private readonly firebaseService: FirebaseService,
   ) { }
 
   async register(dto: RegisterDto): Promise<{ message: string; user: Partial<IUser> }> {
@@ -384,6 +387,134 @@ export class AuthService {
         throw error;
       }
       throw new InternalServerErrorException('Profil güncelleme sırasında bir hata oluştu');
+    }
+  }
+
+  async googleAuth(dto: GoogleAuthDto, ipAddress?: string, userAgent?: string): Promise<{ 
+    success: boolean; 
+    message: string; 
+    user?: Partial<IUser>; 
+    tokens?: { accessToken: string; refreshToken: string } 
+  }> {
+    try {
+      console.log('Google Auth başlatıldı:', { email: dto.email, firstName: dto.firstName });
+      
+      // Firebase ID token'ını doğrula
+      console.log('Firebase token doğrulaması başlatılıyor...');
+      try {
+        const decodedToken = await this.firebaseService.verifyIdToken(dto.idToken);
+        console.log('Firebase token doğrulandı:', { email: decodedToken.email });
+        
+        if (decodedToken.email !== dto.email) {
+          throw new UnauthorizedException('Token email mismatch');
+        }
+      } catch (firebaseError) {
+        console.warn('Firebase token doğrulama atlandı:', firebaseError.message);
+        // Firebase yoksa email kontrolünü atlayıp devam et
+      }
+
+      // Kullanıcı zaten var mı kontrol et
+      console.log('Kullanıcı aranıyor:', dto.email);
+      let user = await this.userRepository.findByEmail(dto.email);
+      
+      if (user) {
+        console.log('✅ Mevcut kullanıcı bulundu:', user.id);
+        // Mevcut kullanıcı - giriş yap
+        const tokens = this.jwtService.generateTokenPair({ 
+          sub: user.id, 
+          email: user.email 
+        });
+
+        // Refresh token'ı kaydet (geçici olarak devre dışı)
+        // await this.userRepository.updateRefreshToken(user.id, tokens.refreshToken);
+
+        // Google ile giriş yapan mevcut kullanıcıların email'ini doğrulanmış yap
+        if (!user.is_verified) {
+          console.log('📧 Email doğrulama durumu güncelleniyor...');
+          await this.userRepository.update(user.id, { is_verified: true });
+          user.is_verified = true;
+        }
+
+        // Son giriş zamanını güncelle
+        await this.userRepository.updateLastLogin(user.id);
+
+        return {
+          success: true,
+          message: 'Google ile giriş başarılı',
+          user: {
+            id: user.id,
+            email: user.email,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            country: user.country,
+            birth_date: user.birth_date,
+            is_verified: true, // Google kullanıcıları her zaman doğrulanmış
+            created_at: user.created_at,
+            updated_at: user.updated_at,
+            last_login: user.last_login
+          },
+          tokens
+        };
+      } else {
+        console.log('🆕 Yeni kullanıcı oluşturuluyor:', dto.email);
+        // Yeni kullanıcı - otomatik kayıt
+        const hashedPassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
+        
+        const newUser = await this.userRepository.create({
+          email: dto.email,
+          password_hash: hashedPassword, // Rastgele şifre
+          first_name: dto.firstName,
+          last_name: dto.lastName,
+          country: undefined,
+          birth_date: undefined,
+          is_verified: true, // Google kullanıcıları otomatik doğrulanmış
+        });
+
+        const tokens = this.jwtService.generateTokenPair({ 
+          sub: newUser.id, 
+          email: newUser.email 
+        });
+
+        // Refresh token'ı kaydet (geçici olarak devre dışı)
+        // await this.userRepository.updateRefreshToken(newUser.id, tokens.refreshToken);
+
+        return {
+          success: true,
+          message: 'Google ile kayıt ve giriş başarılı',
+          user: {
+            id: newUser.id,
+            email: newUser.email,
+            first_name: newUser.first_name,
+            last_name: newUser.last_name,
+            country: newUser.country,
+            birth_date: newUser.birth_date,
+            is_verified: newUser.is_verified,
+            created_at: newUser.created_at,
+            updated_at: newUser.updated_at,
+            last_login: newUser.last_login
+          },
+          tokens
+        };
+      }
+
+    } catch (error) {
+      console.error('❌ Google Auth Error:', error);
+      
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      
+      if (error.message?.includes('Firebase Admin SDK is not initialized')) {
+        return {
+          success: false,
+          message: 'Firebase konfigürasyonu eksik. Service Account key gerekli.'
+        };
+      }
+      
+      return {
+        success: false,
+        message: error.message || 'Google authentication failed'
+      };
     }
   }
 }

@@ -135,4 +135,13 @@ export class UserRepository implements IUserRepository {
     `;
     await this.databaseService.query(query, [userId, passwordHash]);
   }
+
+  async updateRefreshToken(userId: number, refreshToken: string): Promise<void> {
+    const query = `
+      UPDATE users 
+      SET refresh_token = $2, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+    `;
+    await this.databaseService.query(query, [userId, refreshToken]);
+  }
 }

@@ -217,7 +217,7 @@ export default function UserInfo() {
               {editingField === field && (
                 <button
                   onClick={() => handleSave(field)}
-                  className="p-1 text-white hover:bg-white/10 rounded transition-colors"
+                  className="p-1 hover:bg-white/10 rounded transition-colors"
                   disabled={isUpdating}
                   title="Kaydet"
                 >
@@ -303,13 +303,15 @@ export default function UserInfo() {
             <label className="block text-sm font-medium text-white/80 mb-2">
               Email Doğrulama
             </label>
-            <p className={`p-3 rounded-lg text-sm font-medium ${
+            <div className={`p-3 rounded-lg border min-h-[52px] flex items-center ${
               user.is_verified 
-                ? 'bg-green-500/20 text-green-300 border border-green-500/30' 
-                : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
+                ? 'bg-green-500/20 text-green-300 border-green-500/30' 
+                : 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
             }`}>
-              {user.is_verified ? '✅ Doğrulanmış' : '⚠️ Doğrulanmamış'}
-            </p>
+              <span className="text-white font-medium">
+                {user.is_verified ? '✅ Doğrulanmış' : '⚠️ Doğrulanmamış'}
+              </span>
+            </div>
           </div>
         </motion.div>
       </div>
