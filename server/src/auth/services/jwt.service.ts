@@ -21,8 +21,15 @@ export class JwtService {
   private readonly refreshTokenExpiry: string;
 
   constructor() {
-    this.accessTokenSecret = process.env.JWT_ACCESS_SECRET || 'your-super-secret-access-key';//..
-    this.refreshTokenSecret = process.env.JWT_REFRESH_SECRET || 'your-super-secret-refresh-key';//..
+    if (!process.env.JWT_ACCESS_SECRET) {
+      throw new Error('JWT_ACCESS_SECRET environment variable is required');
+    }
+    if (!process.env.JWT_REFRESH_SECRET) {
+      throw new Error('JWT_REFRESH_SECRET environment variable is required');
+    }
+    
+    this.accessTokenSecret = process.env.JWT_ACCESS_SECRET;
+    this.refreshTokenSecret = process.env.JWT_REFRESH_SECRET;
     this.accessTokenExpiry = process.env.JWT_ACCESS_EXPIRY || '24h';
     this.refreshTokenExpiry = process.env.JWT_REFRESH_EXPIRY || '7d';
   }
