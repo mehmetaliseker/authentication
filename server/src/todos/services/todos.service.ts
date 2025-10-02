@@ -28,13 +28,19 @@ export class TodosService {
   }
 
   async toggleStatus(id: number, userId: number): Promise<Todo | null> {
+    console.log('[TodosService.toggleStatus] START:', { id, userId });
     const todo = await this.todosRepository.findOne(id, userId);
+    console.log('[TodosService.toggleStatus] findOne result:', todo);
     if (!todo) {
+      console.log('[TodosService.toggleStatus] Todo not found!');
       return null;
     }
 
     const newStatus = todo.status === 'completed' ? 'pending' : 'completed';
-    return this.todosRepository.update(id, userId, { status: newStatus });
+    console.log('[TodosService.toggleStatus] Toggle:', { id, userId, from: todo.status, to: newStatus });
+    const updated = await this.todosRepository.update(id, userId, { status: newStatus });
+    console.log('[TodosService.toggleStatus] Updated result:', updated);
+    return updated;
   }
 
   async markCompleted(id: number, userId: number): Promise<Todo | null> {

@@ -1,16 +1,16 @@
-version: '4.44.3'
+version: '4.47.0'
 
 services:
   db:
     image: postgres:17
-    container_name: nestdeneme_postgres
+    container_name: nestdeneme
     restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: nestdeneme
     ports:
-      - '5432:5432'
+      - '5433:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
 

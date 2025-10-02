@@ -3,6 +3,7 @@ import { UserRepository } from '../repositories/user.repository';
 import { PasswordResetRepository } from '../repositories/password-reset.repository';
 import { LogoutLogRepository } from '../repositories/logout-log.repository';
 import { JwtService } from './jwt.service';
+import { FirebaseService } from './firebase.service';
 import { RegisterDto } from '../dtos/register.dto';
 import { LoginDto } from '../dtos/login.dto';
 import { UpdateProfileDto } from '../dtos/update-profile.dto';
@@ -17,6 +18,7 @@ export class AuthService {
     private readonly passwordResetRepository: PasswordResetRepository,
     private readonly logoutLogRepository: LogoutLogRepository,
     private readonly jwtService: JwtService,
+    private readonly firebaseService: FirebaseService,
   ) { }
 
   async register(dto: RegisterDto): Promise<{ message: string; user: Partial<IUser> }> {
@@ -51,6 +53,7 @@ export class AuthService {
       };
 
     } catch (error) {
+      console.error('Register hatası:', error);
       if (error instanceof ConflictException) {
         throw error;
       }
@@ -71,13 +74,29 @@ export class AuthService {
         throw new UnauthorizedException('Geçersiz email veya şifre');
       }
 
+      // Firebase kullanıcıları normal şifre ile giriş yapamaz
+      if (user.firebase_uid) {
+        throw new UnauthorizedException('Bu hesap Google ile kayıt olmuş. Lütfen Google ile giriş yapın.');
+      }
+
+      // Password hash null veya geçersiz ise (güvenlik kontrolü)
+      if (!user.password_hash || user.password_hash.length < 60) {
+        throw new UnauthorizedException('Geçersiz hesap yapılandırması.');
+      }
+
       // Hesap kilitli mi kontrol et
       if (user.account_locked && user.locked_until && user.locked_until > new Date()) {
         throw new UnauthorizedException('Hesabınız kilitli. Lütfen daha sonra tekrar deneyin.');
       }
 
       // Şifreyi kontrol et
-      const isMatch = await bcrypt.compare(dto.password, user.password_hash);
+      let isMatch = false;
+      try {
+        isMatch = await bcrypt.compare(dto.password, user.password_hash);
+      } catch (error) {
+        console.error('Bcrypt compare hatası:', error);
+        throw new UnauthorizedException('Şifre doğrulama hatası.');
+      }
       if (!isMatch) {
         // Başarısız login denemesi
         const newFailedAttempts = user.failed_attempts + 1;
@@ -115,11 +134,13 @@ export class AuthService {
           last_name: user.last_name,
           birth_date: user.birth_date,
           country: user.country,
-          is_verified: user.is_verified
+          is_verified: user.is_verified,
+          firebase_uid: user.firebase_uid
         }
       };
 
     } catch (error) {
+      console.error('Login hatası:', error);
       if (error instanceof UnauthorizedException) {
         throw error;
       }
@@ -328,7 +349,13 @@ export class AuthService {
       }
 
       // Email değişikliği kontrolü
-      if (dto.email !== user.email) {
+      if (dto.email && dto.email !== user.email) {
+        // Firebase ile giriş yapmış kullanıcılar email değiştiremez
+        if (user.firebase_uid) {
+          throw new BadRequestException('Google ile giriş yapan kullanıcılar email adresini değiştiremez');
+        }
+        
+        // Email zaten kullanılıyor mu kontrol et
         const existingUser = await this.userRepository.findByEmail(dto.email);
         if (existingUser) {
           throw new ConflictException('Bu email adresi zaten kullanılıyor');
@@ -351,10 +378,14 @@ export class AuthService {
       const updateData: Partial<IUser> = {
         first_name: dto.first_name,
         last_name: dto.last_name,
-        email: dto.email,
         birth_date: dto.birth_date ? new Date(dto.birth_date) : undefined,
         country: dto.country
       };
+
+      // Email sadece değişmişse ve kullanıcı Firebase kullanıcısı değilse güncelle
+      if (dto.email && dto.email !== user.email && !user.firebase_uid) {
+        updateData.email = dto.email;
+      }
 
       // Şifre güncelleniyorsa hash'le ve geçmişe ekle
       if (dto.password) {
@@ -374,7 +405,10 @@ export class AuthService {
       const { password_hash, ...result } = updatedUser;
       return {
         message: 'Profil başarıyla güncellendi',
-        user: result
+        user: {
+          ...result,
+          firebase_uid: result.firebase_uid
+        }
       };
 
     } catch (error) {
@@ -384,6 +418,54 @@ export class AuthService {
         throw error;
       }
       throw new InternalServerErrorException('Profil güncelleme sırasında bir hata oluştu');
+    }
+  }
+
+
+  async verifyFirebaseToken(idToken: string): Promise<{ 
+    accessToken: string; 
+    refreshToken: string; 
+    user: Partial<IUser> 
+  }> {
+    try {
+      // Firebase token'ını doğrula
+      const decodedToken = await this.firebaseService.verifyIdToken(idToken);
+      
+      // Kullanıcıyı veritabanında bul
+      let user = await this.userRepository.findByEmail(decodedToken.email || '');
+      
+      if (!user) {
+        // Yeni kullanıcı oluştur
+        const userData = {
+          first_name: decodedToken.name?.split(' ')[0] || '',
+          last_name: decodedToken.name?.split(' ').slice(1).join(' ') || '',
+          email: decodedToken.email,
+          password_hash: null, // Firebase kullanıcıları için password_hash null
+          is_verified: true,
+          firebase_uid: decodedToken.uid
+        };
+
+        user = await this.userRepository.create(userData);
+      }
+
+      // JWT token'ları oluştur
+      const tokenPair = this.jwtService.generateTokenPair({
+        sub: user.id,
+        email: user.email
+      });
+
+      // Hassas bilgileri çıkar
+      const { password_hash, ...userWithoutPassword } = user;
+
+      return {
+        accessToken: tokenPair.accessToken,
+        refreshToken: tokenPair.refreshToken,
+        user: userWithoutPassword
+      };
+
+    } catch (error) {
+      console.error('Firebase token doğrulama hatası:', error);
+      throw new InternalServerErrorException('Firebase token doğrulanamadı');
     }
   }
 }

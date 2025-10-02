@@ -20,12 +20,12 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-30 bg-slate-900/40 backdrop-blur-lg shadow-lg border-b border-white/20">
+      <header className="fixed top-0 left-0 right-0 z-30 bg-slate-900/30 backdrop-blur-2xl shadow-lg border-b border-white/10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-              <p className="text-sm text-white/70">
+              <p className="text-lg font-medium text-white/90">
                 Hoşgeldin, {user?.first_name} {user?.last_name}
               </p>
             </div>

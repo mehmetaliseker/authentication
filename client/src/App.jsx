@@ -7,7 +7,6 @@ import Navbar from './components/layout/Navbar';
 import WelcomeScreen from './components/shared/WelcomeScreen';
 import WelcomeModal from './components/shared/WelcomeModal';
 import { PageSkeleton } from './components/shared/Skeleton';
-import './App.css';
 
 // Lazy load sayfa bileşenleri
 const Login = lazy(() => import('./pages/Login'));
@@ -43,14 +42,7 @@ function AppContent() {
       <Suspense fallback={<PageSkeleton />}>
         {/* Authenticated Layout with Navbar */}
         {isAuthenticated && user ? (
-          <div className="h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
-            {/* Animated Background Elements */}
-            <div className="absolute inset-0 overflow-hidden">
-              <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse" />
-              <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse" />
-              <div className="absolute top-40 left-40 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse" />
-            </div>
-
+          <div className="h-screen relative overflow-hidden">
             <Navbar />
             
             <main className="relative z-10 h-full">

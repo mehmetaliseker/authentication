@@ -42,6 +42,7 @@ export class TodosRepository {
   }
 
   async update(id: number, userId: number, updateTodoDto: UpdateTodoDto): Promise<Todo | null> {
+    console.log('[TodosRepository.update] input:', { id, userId, update: updateTodoDto });
     const fields: string[] = [];
     const values: any[] = [];
     let paramIndex = 1;
@@ -68,6 +69,10 @@ export class TodosRepository {
         fields.push(`completed_at = CURRENT_TIMESTAMP`);
       } else if (updateTodoDto.status === 'deleted') {
         fields.push(`deleted_at = CURRENT_TIMESTAMP`);
+      } else if (updateTodoDto.status === 'pending') {
+        // pending'e geri alındığında zaman damgalarını temizle
+        fields.push(`completed_at = NULL`);
+        fields.push(`deleted_at = NULL`);
       }
     }
 
@@ -83,7 +88,10 @@ export class TodosRepository {
     `;
     values.push(id, userId);
 
+    console.log('[TodosRepository.update] query:', query.replace(/\s+/g, ' ').trim());
+    console.log('[TodosRepository.update] values:', values);
     const result = await this.databaseService.query(query, values);
+    console.log('[TodosRepository.update] rowCount:', result.rowCount, 'updatedRow:', result.rows?.[0]);
     return result.rows[0] || null;
   }
 

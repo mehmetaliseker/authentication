@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
+import * as crypto from 'crypto';
 
 export interface JwtPayload {
   sub: number;
@@ -15,23 +16,18 @@ export interface TokenPair {
 
 @Injectable()
 export class JwtService {
-  private readonly accessTokenSecret: string;
-  private readonly refreshTokenSecret: string;
   private readonly accessTokenExpiry: string;
   private readonly refreshTokenExpiry: string;
+  private readonly accessTokenSecret: string;
+  private readonly refreshTokenSecret: string;
 
   constructor() {
-    if (!process.env.JWT_ACCESS_SECRET) {
-      throw new Error('JWT_ACCESS_SECRET environment variable is required');
-    }
-    if (!process.env.JWT_REFRESH_SECRET) {
-      throw new Error('JWT_REFRESH_SECRET environment variable is required');
-    }
+    this.accessTokenExpiry = '24h';
+    this.refreshTokenExpiry = '7d';
+    this.accessTokenSecret = process.env.JWT_ACCESS_SECRET || 'authentication-system-access-secret-2024';
+    this.refreshTokenSecret = process.env.JWT_REFRESH_SECRET || 'authentication-system-refresh-secret-2024';
     
-    this.accessTokenSecret = process.env.JWT_ACCESS_SECRET;
-    this.refreshTokenSecret = process.env.JWT_REFRESH_SECRET;
-    this.accessTokenExpiry = process.env.JWT_ACCESS_EXPIRY || '24h';
-    this.refreshTokenExpiry = process.env.JWT_REFRESH_EXPIRY || '7d';
+    console.log('JWT servisi başarıyla yapılandırıldı (sabit token sistemi)');
   }
 
   generateTokenPair(payload: Omit<JwtPayload, 'iat' | 'exp'>): TokenPair {

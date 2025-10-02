@@ -8,10 +8,29 @@ const TodoModal = ({ isOpen, onClose }) => {
   const [newTodo, setNewTodo] = useState('');
   const [filter, setFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [showFilterInput, setShowFilterInput] = useState(false);
+  const [filterText, setFilterText] = useState('');
+  const [editingTodoId, setEditingTodoId] = useState(null);
+  const [editingText, setEditingText] = useState('');
+  const [deletingTodoId, setDeletingTodoId] = useState(null);
+
+  // Message'ı temizle
+  useEffect(() => {
+    if (message) {
+      const timer = setTimeout(() => {
+        setMessage('');
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [message]);
 
   // Todo'ları yükle
   const loadTodos = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.log('Todo yükleme - Kullanıcı giriş yapmamış');
+      return;
+    }
     
     const token = localStorage.getItem('accessToken');
     console.log('Token kontrolü:', { token: token ? 'Mevcut' : 'Yok', userId: user?.id });
@@ -28,11 +47,11 @@ const TodoModal = ({ isOpen, onClose }) => {
       console.log('Todo yükleme yanıtı:', response.status, response.statusText);
       
       if (response.status === 401) {
-        console.error('401 Unauthorized - Token geçersiz, login sayfasına yönlendiriliyor');
+        console.error('401 Unauthorized - Token geçersiz');
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
-        window.location.href = '/login';
+        setMessage('Oturum süreniz dolmuş. Lütfen tekrar giriş yapın.');
         return;
       }
       
@@ -67,11 +86,11 @@ const TodoModal = ({ isOpen, onClose }) => {
       console.log('Todo ekleme yanıtı:', response.status, response.statusText);
       
       if (response.status === 401) {
-        console.error('401 Unauthorized - Token geçersiz, login sayfasına yönlendiriliyor');
+        console.error('401 Unauthorized - Token geçersiz');
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
-        window.location.href = '/login';
+        setMessage('Oturum süreniz dolmuş. Lütfen tekrar giriş yapın.');
         return;
       }
       
@@ -79,6 +98,11 @@ const TodoModal = ({ isOpen, onClose }) => {
       
       if (data.success) {
         setNewTodo('');
+        // Yeni eklenen todo default olarak pending olmalı
+        setTodos((prev) => [
+          { ...data.data, status: data.data?.status || 'pending' },
+          ...prev
+        ]);
         loadTodos();
       } else {
         console.error('Todo ekleme başarısız:', data.message);
@@ -91,40 +115,146 @@ const TodoModal = ({ isOpen, onClose }) => {
   // Todo durumunu değiştir
   const toggleTodo = async (id) => {
     try {
+      const token = localStorage.getItem('accessToken');
       const response = await fetch(`http://localhost:3001/todos/${id}/toggle`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
-      
+
+      if (response.status === 401) {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        setMessage('Oturum süreniz dolmuş. Lütfen tekrar giriş yapın.');
+        return;
+      }
+
       const data = await response.json();
-      if (data.success) {
+      if (response.ok && data.success) {
+        // İyimser güncelleme
+        setTodos((prev) => prev.map((t) => {
+          if (t.id !== id) return t;
+          const wasCompleted = t.status === 'completed';
+          return {
+            ...t,
+            status: wasCompleted ? 'pending' : 'completed',
+            completed_at: wasCompleted ? null : new Date().toISOString(),
+            deleted_at: null
+          };
+        }));
+        // Sunucu ile senkronize et
         loadTodos();
+      } else {
+        setMessage(data?.message || 'Görev güncellenemedi.');
       }
     } catch (error) {
       console.error('Todo güncelleme hatası:', error);
+      setMessage('Beklenmeyen bir hata oluştu.');
     }
+  };
+
+  // Todo silme onayı
+  const confirmDelete = (id) => {
+    setDeletingTodoId(id);
+  };
+
+  const cancelDelete = () => {
+    setDeletingTodoId(null);
   };
 
   // Todo sil
   const deleteTodo = async (id) => {
     try {
+      const token = localStorage.getItem('accessToken');
       const response = await fetch(`http://localhost:3001/todos/${id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
-      
+
+      if (response.status === 401) {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        setMessage('Oturum süreniz dolmuş. Lütfen tekrar giriş yapın.');
+        return;
+      }
+
       const data = await response.json();
-      if (data.success) {
+      if (response.ok && data.success) {
+        // İyimser güncelleme
+        setTodos((prev) => prev.map((t) => (
+          t.id === id
+            ? { ...t, status: 'deleted', deleted_at: new Date().toISOString() }
+            : t
+        )));
+        setDeletingTodoId(null);
+        // Sunucu ile senkronize et
         loadTodos();
+      } else {
+        setMessage(data?.message || 'Görev silinemedi.');
       }
     } catch (error) {
       console.error('Todo silme hatası:', error);
+      setMessage('Beklenmeyen bir hata oluştu.');
+    }
+  };
+
+  // Todo düzenle
+  const startEditing = (todo) => {
+    setEditingTodoId(todo.id);
+    setEditingText(todo.title);
+  };
+
+  const cancelEditing = () => {
+    setEditingTodoId(null);
+    setEditingText('');
+  };
+
+  const saveEdit = async (id) => {
+    if (!editingText.trim()) {
+      setMessage('Todo başlığı boş olamaz.');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(`http://localhost:3001/todos/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ title: editingText.trim() }),
+      });
+
+      if (response.status === 401) {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        setMessage('Oturum süreniz dolmuş. Lütfen tekrar giriş yapın.');
+        return;
+      }
+
+      const data = await response.json();
+      if (response.ok && data.success) {
+        // İyimser güncelleme
+        setTodos((prev) => prev.map((t) => (
+          t.id === id ? { ...t, title: editingText.trim() } : t
+        )));
+        cancelEditing();
+        loadTodos();
+      } else {
+        setMessage(data?.message || 'Görev güncellenemedi.');
+      }
+    } catch (error) {
+      console.error('Todo düzenleme hatası:', error);
+      setMessage('Beklenmeyen bir hata oluştu.');
     }
   };
 
@@ -157,16 +287,27 @@ const TodoModal = ({ isOpen, onClose }) => {
   }, [isOpen, filter]);
 
   const filteredTodos = todos.filter(todo => {
+    // Önce status filtresi uygula
+    let statusMatch = true;
     switch (filter) {
       case 'pending':
-        return todo.status === 'pending';
+        statusMatch = todo.status === 'pending';
+        break;
       case 'completed':
-        return todo.status === 'completed';
+        statusMatch = todo.status === 'completed';
+        break;
       case 'deleted':
-        return todo.status === 'deleted';
+        statusMatch = todo.status === 'deleted';
+        break;
       default:
-        return true;
+        statusMatch = true;
     }
+
+    // Sonra metin filtresi uygula
+    const textMatch = filterText.trim() === '' || 
+      todo.title.toLowerCase().includes(filterText.toLowerCase());
+
+    return statusMatch && textMatch;
   });
 
   if (!isOpen) return null;
@@ -182,8 +323,8 @@ const TodoModal = ({ isOpen, onClose }) => {
         style={{ top: '120px', left: '50%', transform: 'translateX(-50%)' }}
       >
         <motion.div
-            className="bg-slate-800/90 backdrop-blur-lg rounded-2xl shadow-2xl border border-slate-600/30 h-[75vh] overflow-hidden mx-4"
-            style={{ width: '900px', maxWidth: '40vw' }}
+          className="bg-slate-800/90 backdrop-blur-lg rounded-2xl shadow-2xl border border-slate-600/30 h-[75vh] overflow-hidden mx-4"
+          style={{ width: '900px', maxWidth: '40vw' }}
           initial={{ scale: 0.9, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -203,139 +344,322 @@ const TodoModal = ({ isOpen, onClose }) => {
                 </svg>
               </button>
             </div>
+            {/* Message */}
+            {message && (
+              <div className="mt-3 p-3 bg-yellow-500/20 border border-yellow-500/30 rounded-lg">
+                <p className="text-yellow-200 text-sm">{message}</p>
+              </div>
+            )}
           </div>
 
           {/* Content */}
           <div className="p-6 space-y-6 flex flex-col h-full">
-            {/* Todo Ekleme */}
-            <div className="flex gap-3">
-              <textarea
-                value={newTodo}
-                onChange={(e) => setNewTodo(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Yeni görev ekle..."
-                className="flex-1 bg-slate-700/50 text-white placeholder-slate-400 p-3 rounded-lg border border-slate-600/50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none min-h-[48px] max-h-32 overflow-y-auto"
-                rows={1}
-                style={{
-                  height: 'auto',
-                  minHeight: '48px',
-                  maxHeight: '128px'
-                }}
-                onInput={(e) => {
-                  e.target.style.height = 'auto';
-                  e.target.style.height = Math.min(e.target.scrollHeight, 128) + 'px';
-                }}
-              />
-              <button
-                onClick={addTodo}
-                disabled={!newTodo.trim()}
-                className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-medium transition-colors"
-              >
-                Ekle
-              </button>
-            </div>
-
-            {/* Filter Butonları */}
-            <div className="flex gap-2">
-              {['all', 'pending', 'completed', 'deleted'].map((status) => (
-                <button
-                  key={status}
-                  onClick={() => setFilter(status)}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                    filter === status
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/50'
-                  }`}
-                >
-                  {status === 'all' ? 'Tümü' : 
-                   status === 'pending' ? 'Bekleyen' :
-                   status === 'completed' ? 'Tamamlanan' : 'Silinen'}
-                </button>
-              ))}
-            </div>
-
-            {/* Todo Listesi */}
-            <div className="flex-1 overflow-y-auto space-y-3 scrollbar-thin scrollbar-thumb-slate-600/50 scrollbar-track-transparent max-h-96">
-              {isLoading ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-purple-500 border-t-transparent mx-auto"></div>
-                  <p className="text-slate-400 mt-2">Yükleniyor...</p>
+            {/* Authentication Check */}
+            {!user?.id ? (
+              <div className="text-center py-8">
+                <div className="text-red-400 mb-4">
+                  <svg className="w-16 h-16 mx-auto mb-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                  <p className="text-lg font-medium mb-2">Giriş Gerekli</p>
+                  <p className="text-sm text-slate-300 mb-6">Todo listesini kullanmak için giriş yapmanız gerekiyor.</p>
                 </div>
-              ) : filteredTodos.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-slate-400">Henüz görev yok</p>
-                </div>
-              ) : (
-                filteredTodos.map((todo) => (
-                  <motion.div
-                    key={todo.id}
-                    className={`flex items-start gap-3 p-4 rounded-lg border transition-all w-full ${
-                      todo.status === 'completed'
-                        ? 'bg-green-500/20 border-green-500/30'
-                        : todo.status === 'deleted'
-                        ? 'bg-red-500/20 border-red-500/30'
-                        : 'bg-slate-700/50 border-slate-600/50'
-                    }`}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
+              </div>
+            ) : (
+              <>
+                {/* Todo Ekleme */}
+                <div className="flex gap-3">
+                  <textarea
+                    value={newTodo}
+                    onChange={(e) => setNewTodo(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Yeni görev ekle..."
+                    className="flex-1 bg-slate-700/50 text-white placeholder-slate-400 p-3 rounded-lg border border-slate-600/50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none min-h-[48px] max-h-32"
+                    rows={1}
+                    style={{
+                      height: 'auto',
+                      minHeight: '48px',
+                      maxHeight: '128px',
+                      overflowY: 'hidden'
+                    }}
+                    onInput={(e) => {
+                      e.target.style.height = 'auto';
+                      const newHeight = Math.min(e.target.scrollHeight, 128);
+                      e.target.style.height = newHeight + 'px';
+                      // 3 satır = yaklaşık 96px (48px * 2 = 3. satır başlangıcı)
+                      if (newHeight > 96) {
+                        e.target.style.overflowY = 'auto';
+                      } else {
+                        e.target.style.overflowY = 'hidden';
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={addTodo}
+                    disabled={!newTodo.trim()}
+                    className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-medium transition-colors"
                   >
+                    Ekle
+                  </button>
+                </div>
+
+                {/* Filter Butonları */}
+                <div className="flex gap-2 items-center">
+                  {['all', 'pending', 'completed', 'deleted'].map((status) => (
                     <button
-                      onClick={() => todo.status !== 'deleted' ? toggleTodo(todo.id) : null}
-                      disabled={todo.status === 'deleted'}
-                      className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0 mt-0.5 ${
-                        todo.status === 'completed'
-                          ? 'bg-green-500 border-green-500 text-white'
-                          : todo.status === 'deleted'
-                          ? 'border-red-500 bg-red-500/20 cursor-not-allowed'
-                          : 'border-slate-400 hover:border-slate-300'
+                      key={status}
+                      onClick={() => setFilter(status)}
+                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                        filter === status
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/50'
                       }`}
                     >
-                      {todo.status === 'completed' && (
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                      {todo.status === 'deleted' && (
-                        <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      )}
+                      {status === 'all' ? 'Tümü' : 
+                       status === 'pending' ? 'Bekleyen' :
+                       status === 'completed' ? 'Tamamlanan' : 'Silinen'}
                     </button>
-                    
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-slate-200 break-words ${
-                        todo.status === 'completed' ? 'line-through opacity-60' : 
-                        todo.status === 'deleted' ? 'line-through opacity-40 text-red-300' : ''
-                      }`}>
-                        {todo.title}
-                      </p>
-                      {todo.completed_at && todo.status === 'completed' && (
-                        <p className="text-xs text-slate-400 mt-1">
-                          Tamamlandı: {new Date(todo.completed_at).toLocaleString('tr-TR')}
-                        </p>
-                      )}
-                      {todo.deleted_at && todo.status === 'deleted' && (
-                        <p className="text-xs text-slate-400 mt-1">
-                          Silindi: {new Date(todo.deleted_at).toLocaleString('tr-TR')}
-                        </p>
-                      )}
-                    </div>
-                    
-                    {todo.status !== 'deleted' && (
-                      <button
-                        onClick={() => deleteTodo(todo.id)}
-                        className="text-red-400 hover:text-red-300 transition-colors p-1"
+                  ))}
+                  
+                  {/* Morph Arama Butonu */}
+                  <AnimatePresence mode="wait">
+                    {showFilterInput ? (
+                      <motion.div
+                        key="input"
+                        className="relative"
+                        initial={{ width: 40, opacity: 0 }}
+                        animate={{ width: 200, opacity: 1 }}
+                        exit={{ width: 40, opacity: 0 }}
+                        transition={{ duration: 0.4, ease: 'easeInOut' }}
+                      >
+                        <input
+                          type="text"
+                          value={filterText}
+                          onChange={(e) => setFilterText(e.target.value)}
+                          placeholder="Todo başlığında ara..."
+                          className="w-full bg-slate-700/50 text-white placeholder-slate-400 px-3 py-2 pr-10 rounded-lg border border-slate-600/50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                          autoFocus
+                        />
+                        <motion.button
+                          onClick={() => {
+                            setFilterText('');
+                            setShowFilterInput(false);
+                          }}
+                          className="absolute right-2 top-[20%] -translate-y-1/2 text-slate-400 hover:text-red-400 transition-colors p-1 rounded-full hover:bg-slate-600/50"
+                          title="Temizle ve kapat"
+                          initial={{ opacity: 0, scale: 0 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: 0.2, duration: 0.2 }}
+                          whileHover={{ scale: 1.2, rotate: 90 }}
+                          whileTap={{ scale: 0.8 }}
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </motion.button>
+                      </motion.div>
+                    ) : (
+                      <motion.button
+                        key="button"
+                        onClick={() => setShowFilterInput(true)}
+                        className="bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 hover:text-white p-2 rounded-lg transition-colors"
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        transition={{ duration: 0.3 }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        title="Ara"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
-                      </button>
+                      </motion.button>
                     )}
-                  </motion.div>
-                ))
-              )}
-            </div>
+                  </AnimatePresence>
+                </div>
+
+                {/* Todo Listesi */}
+                <div className="flex-1 overflow-y-auto space-y-3 scrollbar-thin scrollbar-thumb-slate-600/50 scrollbar-track-transparent max-h-96">
+                  {/* Filtreleme Sonuçları */}
+                  {filterText.trim() && (
+                    <div className="bg-slate-700/30 p-3 rounded-lg border border-slate-600/30">
+                      <p className="text-slate-300 text-sm">
+                        "{filterText}" için {filteredTodos.length} sonuç bulundu
+                      </p>
+                    </div>
+                  )}
+                  
+                  {isLoading ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-2 border-purple-500 border-t-transparent mx-auto"></div>
+                      <p className="text-slate-400 mt-2">Yükleniyor...</p>
+                    </div>
+                  ) : filteredTodos.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-slate-400">
+                        {filterText.trim() ? 'Arama kriterlerine uygun görev bulunamadı' : 'Henüz görev yok'}
+                      </p>
+                      {filterText.trim() && (
+                        <button
+                          onClick={() => setFilterText('')}
+                          className="mt-2 text-purple-400 hover:text-purple-300 text-sm"
+                        >
+                          Filtreyi temizle
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    filteredTodos.map((todo) => (
+                      <motion.div
+                        key={todo.id}
+                        className={`flex items-start gap-3 p-4 rounded-lg border transition-all w-full ${
+                          todo.status === 'completed'
+                            ? 'bg-green-500/20 border-green-500/30'
+                            : todo.status === 'deleted'
+                            ? 'bg-red-500/20 border-red-500/30'
+                            : 'bg-slate-700/50 border-slate-600/50'
+                        }`}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <button
+                          onClick={() => todo.status !== 'deleted' ? toggleTodo(todo.id) : null}
+                          disabled={todo.status === 'deleted'}
+                          className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0 mt-0.5 ${
+                            todo.status === 'completed'
+                              ? 'bg-green-500 border-green-500 text-white'
+                              : todo.status === 'deleted'
+                              ? 'border-red-500 bg-red-500/20 cursor-not-allowed'
+                              : 'border-slate-400 hover:border-slate-300'
+                          }`}
+                        >
+                          {todo.status === 'completed' && (
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                          {todo.status === 'deleted' && (
+                            <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          )}
+                        </button>
+                        
+                        <div className="flex-1 min-w-0">
+                          {editingTodoId === todo.id ? (
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={editingText}
+                                onChange={(e) => setEditingText(e.target.value)}
+                                onKeyPress={(e) => {
+                                  if (e.key === 'Enter') saveEdit(todo.id);
+                                  if (e.key === 'Escape') cancelEditing();
+                                }}
+                                className="flex-1 bg-slate-600/50 text-white px-2 py-1 rounded border border-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                autoFocus
+                              />
+                              <button
+                                onClick={() => saveEdit(todo.id)}
+                                className="text-green-400 hover:text-green-300 transition-colors p-1"
+                                title="Kaydet"
+                              >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={cancelEditing}
+                                className="text-slate-400 hover:text-slate-300 transition-colors p-1"
+                                title="İptal"
+                              >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                              <p className={`text-slate-200 break-words ${
+                                todo.status === 'completed' ? 'line-through opacity-60' : 
+                                todo.status === 'deleted' ? 'line-through opacity-40 text-red-300' : ''
+                              }`}>
+                                {todo.title}
+                              </p>
+                              {todo.completed_at && todo.status === 'completed' && (
+                                <p className="text-xs text-slate-400 mt-1">
+                                  Tamamlandı: {new Date(todo.completed_at).toLocaleString('tr-TR')}
+                                </p>
+                              )}
+                              {todo.deleted_at && todo.status === 'deleted' && (
+                                <p className="text-xs text-slate-400 mt-1">
+                                  Silindi: {new Date(todo.deleted_at).toLocaleString('tr-TR')}
+                                </p>
+                              )}
+                            </>
+                          )}
+                        </div>
+                        
+                        {todo.status === 'pending' && editingTodoId !== todo.id && deletingTodoId !== todo.id && (
+                          <button
+                            onClick={() => startEditing(todo)}
+                            className="text-blue-400 hover:text-blue-300 transition-colors p-1"
+                            title="Düzenle"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                        )}
+                        
+                        {todo.status !== 'deleted' && editingTodoId !== todo.id && deletingTodoId !== todo.id && (
+                          <button
+                            onClick={() => confirmDelete(todo.id)}
+                            className="text-red-400 hover:text-red-300 transition-colors p-1"
+                            title="Sil"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        )}
+                        
+                        {deletingTodoId === todo.id && (
+                          <motion.div
+                            className="flex items-center gap-2"
+                            initial={{ opacity: 0, x: 10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 10 }}
+                          >
+                            <span className="text-xs text-slate-300 whitespace-nowrap">Emin misiniz?</span>
+                            <button
+                              onClick={() => deleteTodo(todo.id)}
+                              className="text-green-400 hover:text-green-300 transition-colors p-1"
+                              title="Evet, sil"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={cancelDelete}
+                              className="text-slate-400 hover:text-slate-300 transition-colors p-1"
+                              title="İptal"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </motion.div>
+                        )}
+                      </motion.div>
+                    ))
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </motion.div>
       </motion.div>

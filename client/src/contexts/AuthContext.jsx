@@ -1,4 +1,6 @@
 import React, { createContext, useState, useCallback } from 'react';
+import { signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
+import { auth, googleProvider } from '../config/firebase';
 
 export const AuthContext = createContext();
 
@@ -102,18 +104,24 @@ export function AuthProvider({ children }) {
     try {
       const currentUser = user || JSON.parse(localStorage.getItem('user') || '{}');
       
-      const response = await fetch('http://localhost:3001/auth/logout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: currentUser.id }),
-      });
+      // Backend'e logout isteği gönder
+      if (currentUser.id) {
+        const response = await fetch('http://localhost:3001/auth/logout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: currentUser.id }),
+        });
 
-      const data = await response.json();
+        const data = await response.json();
+        setMessage(data.message || 'Başarıyla çıkış yapıldı');
+      }
       
-      // Başarılı olsun ya da olmasın, client tarafında temizlik yap
+      // Firebase'den çıkış yap
+      await firebaseSignOut(auth);
+      
+      // Client tarafında temizlik yap
       setUser(null);
       setIsAuthenticated(false);
-      setMessage(data.message || 'Başarıyla çıkış yapıldı');
       
       // localStorage'dan token'ları temizle
       localStorage.removeItem('accessToken');
@@ -177,6 +185,57 @@ export function AuthProvider({ children }) {
     }
   }
 
+  async function loginWithGoogle() {
+    setIsLoading(true);
+    setMessage('');
+    
+    try {
+      // Firebase ile Google girişi yap (popup kullan)
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      
+      // Firebase ID token'ını al
+      const idToken = await user.getIdToken();
+      
+      // Backend'e Firebase token'ını gönder
+      const response = await fetch('http://localhost:3001/auth/firebase/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ idToken }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        // Backend'den gelen JWT token'ları ve kullanıcı bilgilerini kaydet
+        localStorage.setItem('accessToken', data.accessToken);
+        localStorage.setItem('refreshToken', data.refreshToken);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        setUser(data.user);
+        setIsAuthenticated(true);
+        setJustLoggedIn(true);
+        setMessage(`✅ Google ile giriş başarılı! Hoşgeldin ${data.user.first_name || data.user.email}!`);
+      } else {
+        setMessage('❌ Google ile giriş başarısız: ' + (data.message || 'Bilinmeyen hata'));
+      }
+      
+    } catch (error) {
+      console.error('Google login error:', error);
+      if (error.code === 'auth/popup-closed-by-user') {
+        setMessage('Google ile giriş iptal edildi');
+      } else if (error.code === 'auth/popup-blocked') {
+        setMessage('Popup engellendi. Lütfen popup engelleyicisini kapatın.');
+      } else {
+        setMessage('❌ Google ile giriş sırasında bir hata oluştu: ' + error.message);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   // Sayfa yüklendiğinde localStorage'dan kullanıcı bilgilerini yükle
   const checkAuthStatus = useCallback(() => {
     const storedUser = localStorage.getItem('user');
@@ -216,6 +275,7 @@ export function AuthProvider({ children }) {
   const value = {
     message,
     login,
+    loginWithGoogle,
     register,
     logout,
     updateProfile,
@@ -235,4 +295,3 @@ export function AuthProvider({ children }) {
   );
 }
 
-// useAuth hook'u artık hooks/useAuth.js dosyasında

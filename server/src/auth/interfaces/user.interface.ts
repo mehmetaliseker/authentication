@@ -3,7 +3,7 @@ export interface IUser {
   first_name: string;
   last_name: string;
   email: string;
-  password_hash: string;
+  password_hash: string | null;
   birth_date?: Date;
   country?: string;
   is_verified: boolean;
@@ -12,6 +12,7 @@ export interface IUser {
   account_locked: boolean;
   last_login?: Date;
   locked_until?: Date;
+  firebase_uid?: string;
   created_at: Date;
   updated_at: Date;
 }

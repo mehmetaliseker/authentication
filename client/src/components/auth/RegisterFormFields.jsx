@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import Input from '../shared/Input';
 import Button from '../shared/Button';
+import countries from '../../data/countries.json';
 
 export default function RegisterFormFields({ 
   formData, 
@@ -148,16 +149,20 @@ export default function RegisterFormFields({
         whileHover={{ scale: 1.02, x: -5, rotateX: -5 }}
         whileFocus={{ scale: 1.05 }}
       >
-        <Input
-          type="text"
+        <select
           name="country"
-          placeholder="Yaşadığınız Ülke"
           value={formData.country}
           onChange={handleChange}
           disabled={isLoading}
-          autoComplete="country"
-          className="w-full"
-        />
+          className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/30 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent backdrop-blur-sm transition-all"
+        >
+          <option value="" className="bg-gray-800 text-white">Ülke seçin...</option>
+          {countries.map((country) => (
+            <option key={country} value={country} className="bg-gray-800 text-white">
+              {country}
+            </option>
+          ))}
+        </select>
       </motion.div>
 
       <motion.div

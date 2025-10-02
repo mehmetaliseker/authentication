@@ -10,7 +10,7 @@ export class UserRepository implements IUserRepository {
     const query = `
       SELECT id, first_name, last_name, email, password_hash, birth_date, country, is_verified, 
              verification_token, failed_attempts, account_locked, 
-             last_login, locked_until, created_at, updated_at
+             last_login, locked_until, firebase_uid, created_at, updated_at
       FROM users 
       WHERE email = $1
     `;
@@ -23,7 +23,7 @@ export class UserRepository implements IUserRepository {
     const query = `
       SELECT id, first_name, last_name, email, password_hash, birth_date, country, is_verified, 
              verification_token, failed_attempts, account_locked, 
-             last_login, locked_until, created_at, updated_at
+             last_login, locked_until, firebase_uid, created_at, updated_at
       FROM users 
       WHERE id = $1
     `;
@@ -34,22 +34,23 @@ export class UserRepository implements IUserRepository {
 
   async create(userData: Partial<IUser>): Promise<IUser> {
     const query = `
-      INSERT INTO users (first_name, last_name, email, password_hash, birth_date, country, is_verified, verification_token)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      INSERT INTO users (first_name, last_name, email, password_hash, birth_date, country, is_verified, verification_token, firebase_uid)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING id, first_name, last_name, email, password_hash, birth_date, country, is_verified, 
                 verification_token, failed_attempts, account_locked, 
-                last_login, locked_until, created_at, updated_at
+                last_login, locked_until, firebase_uid, created_at, updated_at
     `;
 
     const values = [
       userData.first_name || '',
       userData.last_name || '',
       userData.email,
-      userData.password_hash,
+      userData.password_hash !== undefined ? userData.password_hash : null,
       userData.birth_date || null,
       userData.country || null,
       userData.is_verified || false,
-      userData.verification_token || null
+      userData.verification_token || null,
+      userData.firebase_uid || null
     ];
 
     const result = await this.databaseService.query(query, values);
@@ -83,7 +84,7 @@ export class UserRepository implements IUserRepository {
       WHERE id = $${paramIndex}
       RETURNING id, first_name, last_name, email, password_hash, birth_date, country, is_verified, 
                 verification_token, failed_attempts, account_locked, 
-                last_login, locked_until, created_at, updated_at
+                last_login, locked_until, firebase_uid, created_at, updated_at
     `;
 
     const result = await this.databaseService.query(query, values);

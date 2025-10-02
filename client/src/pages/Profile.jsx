@@ -5,6 +5,7 @@ import { Navigate } from 'react-router-dom';
 import Button from '../components/shared/Button';
 import Input from '../components/shared/Input';
 import Message from '../components/shared/Message';
+import countries from '../data/countries.json';
 
 export default function Profile() {
   const { user, isAuthenticated, updateProfile } = useAuth();
@@ -19,6 +20,9 @@ export default function Profile() {
   });
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Kullanıcının Google ile giriş yapıp yapmadığını kontrol et
+  const isGoogleUser = user?.firebase_uid != null;
 
   useEffect(() => {
     if (user) {
@@ -40,10 +44,14 @@ export default function Profile() {
       const updateData = {
         first_name: values.first_name,
         last_name: values.last_name,
-        email: values.email,
         birth_date: values.birth_date,
         country: values.country
       };
+
+      // Email sadece Google kullanıcısı değilse gönder
+      if (!isGoogleUser) {
+        updateData.email = values.email;
+      }
 
       // Şifre sadece girilmişse ekle
       if (values.password) {
@@ -195,7 +203,8 @@ export default function Profile() {
                   onChange={handleChange}
                   placeholder="Email adresinizi girin"
                   required
-                  className="w-full"
+                  disabled={isGoogleUser}
+                  className={`w-full ${isGoogleUser ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                 />
               </motion.div>
 
@@ -243,14 +252,19 @@ export default function Profile() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Ülke
                   </label>
-                  <Input
-                    type="text"
+                  <select
                     name="country"
                     value={values.country}
                     onChange={handleChange}
-                    placeholder="Ülkenizi girin"
-                    className="w-full"
-                  />
+                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  >
+                    <option value="">Ülke seçin...</option>
+                    {countries.map((country) => (
+                      <option key={country} value={country}>
+                        {country}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </motion.div>
 

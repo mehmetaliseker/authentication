@@ -1,17 +1,18 @@
-import { Controller, Get, Query, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Query, HttpException, HttpStatus, Req } from '@nestjs/common';
 import { GoogleSearchService } from '../services/google-search.service';
 import { ISearchResponse } from '../interfaces/search.interface';
+import type { Request } from 'express';
 
 @Controller('search')
 export class SearchController {
-  private readonly googleSearchService: GoogleSearchService;
-
-  constructor() {
-    this.googleSearchService = new GoogleSearchService();
-  }
+  constructor(private readonly googleSearchService: GoogleSearchService) {}
 
   @Get()
-  public async search(@Query('q') query: string): Promise<ISearchResponse> {
+  public async search(
+    @Query('q') query: string,
+    @Query('userId') userId?: string,
+    @Req() req?: Request
+  ): Promise<ISearchResponse> {
     if (!query || query.trim().length === 0) {
       throw new HttpException('Arama sorgusu gereklidir', HttpStatus.BAD_REQUEST);
     }
@@ -21,13 +22,22 @@ export class SearchController {
     }
 
     try {
-      return await this.googleSearchService.search(query.trim());
+      const userIdNum = userId ? parseInt(userId, 10) : undefined;
+      const ipAddress = req?.ip || req?.connection?.remoteAddress;
+      const userAgent = req?.get('User-Agent');
+      
+      return await this.googleSearchService.search(
+        query.trim(), 
+        userIdNum, 
+        ipAddress, 
+        userAgent
+      );
     } catch (error) {
       console.error('Search controller error:', error);
-      throw new HttpException(
-        error.message || 'Arama işlemi sırasında bir hata oluştu',
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
+      const message = (error as Error).message || 'Arama işlemi sırasında bir hata oluştu';
+      const isConnectivity = message.includes('bağlantı') || message.includes('İnternet') || message.includes('network');
+      const status = isConnectivity ? HttpStatus.SERVICE_UNAVAILABLE : HttpStatus.INTERNAL_SERVER_ERROR;
+      throw new HttpException(message, status);
     }
   }
 }

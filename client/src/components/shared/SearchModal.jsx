@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../../hooks/useAuth';
 
 const SearchModal = ({ isOpen, onClose }) => {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -16,7 +18,9 @@ const SearchModal = ({ isOpen, onClose }) => {
     setHasSearched(true);
 
     try {
-      const response = await fetch(`http://localhost:3001/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      const apiBaseUrl = 'http://localhost:3001';
+      const userId = user?.id ? `&userId=${user.id}` : '';
+      const response = await fetch(`${apiBaseUrl}/search?q=${encodeURIComponent(searchQuery.trim())}${userId}`);
       
       if (!response.ok) {
         const errorData = await response.json();

@@ -11,8 +11,9 @@ export class UpdateProfileDto {
   @MaxLength(100, { message: 'Soyad en fazla 100 karakter olabilir' })
   last_name: string;
 
+  @IsOptional()
   @IsEmail({}, { message: 'Geçerli bir email adresi giriniz' })
-  email: string;
+  email?: string;
 
   @IsOptional()
   @IsString()

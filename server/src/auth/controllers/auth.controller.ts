@@ -1,11 +1,11 @@
-import { Body, Controller, Post, Param, Get, Req, UseGuards, Put } from '@nestjs/common';
+import { Body, Controller, Post, Param, Get, Req, UseGuards, Put, Query, Res } from '@nestjs/common';
 import { AuthService } from '../services/auth.service';
 import { RegisterDto } from '../dtos/register.dto';
 import { LoginDto } from '../dtos/login.dto';
 import { ForgotPasswordDto } from '../dtos/forgot-password.dto';
 import { ResetPasswordDto } from '../dtos/reset-password.dto';
 import { UpdateProfileDto } from '../dtos/update-profile.dto';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 
 @Controller('auth')
 export class AuthController {
@@ -51,5 +51,11 @@ export class AuthController {
   @Put('update-profile')
   updateProfile(@Body() dto: UpdateProfileDto & { userId: number }) {
     return this.authService.updateProfile(dto.userId, dto);
+  }
+
+
+  @Post('firebase/verify')
+  async verifyFirebaseToken(@Body() body: { idToken: string }) {
+    return this.authService.verifyFirebaseToken(body.idToken);
   }
 }

@@ -13,6 +13,7 @@ export default function DashboardHeader() {
 
   const handleLogout = async () => {
     await logout();
+    goTo('/login');
   };
 
   const handleUpdateProfile = () => {
@@ -25,7 +26,7 @@ export default function DashboardHeader() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-            <p className="text-sm text-white/70">
+            <p className="text-lg font-medium text-white/90">
               Hoşgeldin, {user?.first_name} {user?.last_name}
             </p>
           </div>
