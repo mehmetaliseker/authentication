@@ -12,9 +12,9 @@ export class FirebaseService {
   private initializeFirebase(): void {
     if (!admin.apps.length) {
       // Hardcoded Firebase yapılandırması
-      const privateKey = `your-firebase-private-key-here`;
+      const privateKey = `your-private-key`;
       
-      const clientEmail = 'Your Firebase Client Email Here';
+      const clientEmail = 'your-client-email';
 
       this.app = admin.initializeApp({
         credential: admin.credential.cert({

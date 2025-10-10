@@ -16,6 +16,7 @@ const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Logout = lazy(() => import('./pages/Logout'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Profile = lazy(() => import('./pages/Profile'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 function AppContent() {
   const { checkAuthStatus, isAuthenticated, user, justLoggedIn, setJustLoggedIn } = useAuth();
@@ -55,6 +56,8 @@ function AppContent() {
                 <Route path="/forgot-password" element={<Navigate to="/" replace />} />
                 <Route path="/reset-password/:token" element={<Navigate to="/" replace />} />
                 <Route path="/logout" element={<Logout />} />
+                <Route path="/404" element={<NotFound />} />
+                <Route path="*" element={<NotFound />} />
               </Routes>
             </main>
 
@@ -77,6 +80,9 @@ function AppContent() {
               <Route path="reset-password/:token" element={<ResetPassword />} />
               <Route path="logout" element={<Logout />} />
             </Route>
+            
+            <Route path="/404" element={<NotFound />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         )}
       </Suspense>

@@ -10,8 +10,8 @@ export class GoogleSearchService implements ISearchService {
 
   constructor(private readonly databaseService: DatabaseService) {
     //Google Search API
-    this.apiKey = 'YOUR_GOOGLE_API_KEY_HERE'; // .env dosyasından alınabilir
-    this.searchEngineId = 'YOUR_SEARCH_ENGINE_ID_HERE'; // .env dosyasından alınabilir
+    this.apiKey = 'your-api-key'; // .env dosyasından 
+    this.searchEngineId = 'your-search-engine-id'; // .env dosyasından 
     
     console.log('Google Search servisi başarıyla yapılandırıldı');
   }
@@ -44,7 +44,7 @@ export class GoogleSearchService implements ISearchService {
           title: t.Text || t.Result || 'Sonuç',
           link: t.FirstURL || '#',
           snippet: t.Text || '',
-          displayLink: t.FirstURL ? new URL(t.FirstURL).hostname : ''
+          displayLink: t.FirstURL ? new URL(t.FirstURL).hostname : 'Bağlantı Bulunamadı'
         }));
         const searchResponse: ISearchResponse = {
           items,

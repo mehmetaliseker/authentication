@@ -3,10 +3,10 @@ import * as THREE from 'three';
 import './LiquidEther.css';
 
 export default function LiquidEther({
-  mouseForce = 20,
-  cursorSize = 100,
-  isViscous = false,
-  viscous = 30,
+  mouseForce = 200,
+  cursorSize = 1000,
+  isViscous = true,
+  viscous = 5,
   iterationsViscous = 32,
   iterationsPoisson = 32,
   dt = 0.014,
@@ -17,8 +17,8 @@ export default function LiquidEther({
   style = {},
   className = '',
   autoDemo = true,
-  autoSpeed = 2.5,
-  autoIntensity = 2.2,
+  autoSpeed = .1,
+  autoIntensity = .5,
   takeoverDuration = 0.25,
   autoResumeDelay = 1000,
   autoRampDuration = .2

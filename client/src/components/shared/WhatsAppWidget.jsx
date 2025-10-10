@@ -60,7 +60,7 @@ export default function WhatsAppWidget() {
       <AnimatePresence>
         {isModalOpen && (
           <motion.div
-            className="fixed bottom-24 right-6 z-50 w-[360px] bg-white rounded-2xl shadow-2xl overflow-hidden"
+            className="fixed bottom-32 right-10 z-50 w-[360px] bg-white rounded-2xl shadow-2xl overflow-hidden"
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}

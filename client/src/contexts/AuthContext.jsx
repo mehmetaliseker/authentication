@@ -10,6 +10,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [justLoggedIn, setJustLoggedIn] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   async function login(email, password) {
     setIsLoading(true);
@@ -285,7 +286,9 @@ export function AuthProvider({ children }) {
     isAuthenticated,
     justLoggedIn,
     setJustLoggedIn,
-    checkAuthStatus
+    checkAuthStatus,
+    isEditingProfile,
+    setIsEditingProfile
   };
 
   return (

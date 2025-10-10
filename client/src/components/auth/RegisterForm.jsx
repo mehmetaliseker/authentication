@@ -5,6 +5,7 @@ import Input from '../shared/Input';
 import Button from '../shared/Button';
 import { FormSkeleton } from '../shared/Skeleton';
 import Message from '../shared/Message';
+import countries from '../../data/countries.json';
 
 export default function RegisterForm() {
   const { message, register, isLoading } = useAuth();
@@ -173,16 +174,21 @@ export default function RegisterForm() {
             />
           </motion.div>
           <motion.div>
-            <Input
-              type="text"
+            <select
               name="country"
-              placeholder="Ülke"
               value={values.country}
               onChange={handleChange}
               disabled={isLoading || isSubmitting}
-              autoComplete="country"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-            />
+              required
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white"
+            >
+              <option value="">Ülke seçin...</option>
+              {countries.map((country) => (
+                <option key={country} value={country}>
+                  {country}
+                </option>
+              ))}
+            </select>
           </motion.div>
         </div>
 

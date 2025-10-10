@@ -7,7 +7,7 @@ import SearchModal from '../shared/SearchModal';
 import userProfileIcon from '../../assets/basic-user-profile.svg';
 
 export default function Navbar() {
-  const { user } = useAuth();
+  const { user, isEditingProfile } = useAuth();
   const { goTo } = useNavigation();
   const [isProfilePopupOpen, setIsProfilePopupOpen] = useState(false);
   const [isTodoModalOpen, setIsTodoModalOpen] = useState(false);
@@ -33,10 +33,11 @@ export default function Navbar() {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">
                 <motion.button
-                  onClick={() => setIsSearchModalOpen(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                  onClick={() => !isEditingProfile && setIsSearchModalOpen(true)}
+                  className={`${isEditingProfile ? 'bg-gray-500 cursor-not-allowed opacity-50' : 'bg-blue-600 hover:bg-blue-700'} text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2`}
+                  whileHover={!isEditingProfile ? { scale: 1.05 } : {}}
+                  whileTap={!isEditingProfile ? { scale: 0.95 } : {}}
+                  disabled={isEditingProfile}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -45,10 +46,11 @@ export default function Navbar() {
                 </motion.button>
                 
                 <motion.button
-                  onClick={() => setIsTodoModalOpen(true)}
-                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                  onClick={() => !isEditingProfile && setIsTodoModalOpen(true)}
+                  className={`${isEditingProfile ? 'bg-gray-500 cursor-not-allowed opacity-50' : 'bg-purple-600 hover:bg-purple-700'} text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2`}
+                  whileHover={!isEditingProfile ? { scale: 1.05 } : {}}
+                  whileTap={!isEditingProfile ? { scale: 0.95 } : {}}
+                  disabled={isEditingProfile}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
@@ -59,10 +61,11 @@ export default function Navbar() {
                 {/* Profile Icon */}
                 <div className="relative">
                   <motion.button
-                    onClick={() => setIsProfilePopupOpen(!isProfilePopupOpen)}
-                    className="w-10 h-10 rounded-full border-2 border-white/30 hover:border-white/50 transition-colors overflow-hidden bg-white/10"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
+                    onClick={() => !isEditingProfile && setIsProfilePopupOpen(!isProfilePopupOpen)}
+                    className={`w-10 h-10 rounded-full border-2 ${isEditingProfile ? 'border-gray-500 cursor-not-allowed opacity-50' : 'border-white/30 hover:border-white/50'} transition-colors overflow-hidden bg-white/10`}
+                    whileHover={!isEditingProfile ? { scale: 1.1 } : {}}
+                    whileTap={!isEditingProfile ? { scale: 0.95 } : {}}
+                    disabled={isEditingProfile}
                   >
                     <img 
                       src={userProfileIcon} 

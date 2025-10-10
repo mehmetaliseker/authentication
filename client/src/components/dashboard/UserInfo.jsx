@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../hooks/useAuth';
 import { UserInfoSkeleton } from '../shared/Skeleton';
@@ -6,14 +6,13 @@ import SaveIcon from '../../assets/save-icon.svg';
 import countries from '../../data/countries.json';
 
 export default function UserInfo() {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, setIsEditingProfile } = useAuth();
   const [editingField, setEditingField] = useState(null);
   const [editValues, setEditValues] = useState({});
   const [isUpdating, setIsUpdating] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const tooltipTimeoutRef = useRef(null);
-  // ****inputta yazı yazmaya çalışınca her seferinde yazıyı sona atma olayı var*****
 
   if (!user) {
     return <UserInfoSkeleton />;
@@ -56,6 +55,7 @@ export default function UserInfo() {
 
   const handleEdit = (field) => {
     setEditingField(field);
+    setIsEditingProfile(true);
     setHasUnsavedChanges(false);
     setShowTooltip(false);
     let value = user[field] || '';
@@ -77,8 +77,18 @@ export default function UserInfo() {
     
     if (editValues[field] === user[field]) {
       setEditingField(null);
+      setIsEditingProfile(false);
       setHasUnsavedChanges(false);
       return;
+    }
+
+    // Email için @gmail.com kontrolü
+    if (field === 'email' && editValues[field]) {
+      const email = editValues[field].trim();
+      if (!email.endsWith('@gmail.com')) {
+        alert('Email adresi @gmail.com ile bitmelidir.');
+        return;
+      }
     }
 
     // Doğum tarihi için 18 yaş kontrolü
@@ -96,6 +106,7 @@ export default function UserInfo() {
       if (actualAge < 18) {
         alert('18 yaşından küçük kullanıcılar için doğum tarihi güncellenemez.');
         setEditingField(null);
+        setIsEditingProfile(false);
         setHasUnsavedChanges(false);
         return;
       }
@@ -130,6 +141,7 @@ export default function UserInfo() {
         if (data.user) {
           updateUser(data.user);
           setEditingField(null);
+          setIsEditingProfile(false);
           setHasUnsavedChanges(false);
         } else {
           alert('Güncelleme başarısız oldu');
@@ -165,11 +177,13 @@ export default function UserInfo() {
       }, 3000);
     } else {
       setEditingField(null);
+      setIsEditingProfile(false);
     }
   };
 
   const handleCancel = (field) => {
     setEditingField(null);
+    setIsEditingProfile(false);
     setHasUnsavedChanges(false);
     setShowTooltip(false);
     setEditValues({ ...editValues, [field]: user[field] || '' });
@@ -185,8 +199,7 @@ export default function UserInfo() {
 
   const EditableField = ({ field, label, value, type = 'text', disabled = false }) => {
     const isEditing = editingField === field;
-    const inputRef = useRef(null);
-    const cursorPosRef = useRef(null);
+    const isOtherFieldEditing = editingField && editingField !== field;
 
     // Doğum tarihi için özel değer formatı
     const getDisplayValue = () => {
@@ -200,37 +213,29 @@ export default function UserInfo() {
       return value || 'Belirtilmemiş';
     };
 
-    // İmleci kaydet ve restore et
-    const handleChange = (e) => {
-      const { selectionStart, value } = e.target;
-      cursorPosRef.current = selectionStart;
-      handleInputChange(field, value);
-    };
-
-    // DOM update sonrası imleci geri koy
-    useLayoutEffect(() => {
-      if (isEditing && inputRef.current && cursorPosRef.current !== null) {
-        inputRef.current.setSelectionRange(cursorPosRef.current, cursorPosRef.current);
-      }
-    }, [editValues, isEditing]);
-
     return (
-      <div>
+      <div className="relative">
+        {/* Overlay to block interaction when other field is being edited */}
+        {isOtherFieldEditing && (
+          <div className="absolute inset-0 z-10 bg-black/5 rounded-lg cursor-not-allowed"></div>
+        )}
         <div className="flex items-center justify-between mb-2">
           <label className="block text-sm font-medium text-white/80">
             {label}
           </label>
           {!disabled && (
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => handleEdit(field)}
-                className="p-1 hover:bg-white/10 rounded transition-colors"
-                disabled={isUpdating}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-white/60 hover:text-white">
-                  <path d="M14.3601 4.07866L15.2869 3.15178C16.8226 1.61607 19.3125 1.61607 20.8482 3.15178C22.3839 4.68748 22.3839 7.17735 20.8482 8.71306L19.9213 9.63993M14.3601 4.07866C14.3601 4.07866 14.4759 6.04828 16.2138 7.78618C17.9517 9.52407 19.9213 9.63993 19.9213 9.63993M14.3601 4.07866L5.83882 12.5999C5.26166 13.1771 4.97308 13.4656 4.7249 13.7838C4.43213 14.1592 4.18114 14.5653 3.97634 14.995C3.80273 15.3593 3.67368 15.7465 3.41556 16.5208L2.32181 19.8021M19.9213 9.63993L11.4001 18.1612C10.8229 18.7383 10.5344 19.0269 10.2162 19.2751C9.84082 19.5679 9.43469 19.8189 9.00498 20.0237C8.6407 20.1973 8.25352 20.3263 7.47918 20.5844L4.19792 21.6782M4.19792 21.6782L3.39584 21.9456C3.01478 22.0726 2.59466 21.9734 2.31063 21.6894C2.0266 21.4053 1.92743 20.9852 2.05445 20.6042L2.32181 19.8021M4.19792 21.6782L2.32181 19.8021" stroke="currentColor" strokeWidth="1.5"/>
-                </svg>
-              </button>
+              {!isEditing && (
+                <button
+                  onClick={() => handleEdit(field)}
+                  className="p-1 hover:bg-white/10 rounded transition-colors"
+                  disabled={isUpdating || isOtherFieldEditing}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-white/60 hover:text-white">
+                    <path d="M14.3601 4.07866L15.2869 3.15178C16.8226 1.61607 19.3125 1.61607 20.8482 3.15178C22.3839 4.68748 22.3839 7.17735 20.8482 8.71306L19.9213 9.63993M14.3601 4.07866C14.3601 4.07866 14.4759 6.04828 16.2138 7.78618C17.9517 9.52407 19.9213 9.63993 19.9213 9.63993M14.3601 4.07866L5.83882 12.5999C5.26166 13.1771 4.97308 13.4656 4.7249 13.7838C4.43213 14.1592 4.18114 14.5653 3.97634 14.995C3.80273 15.3593 3.67368 15.7465 3.41556 16.5208L2.32181 19.8021M19.9213 9.63993L11.4001 18.1612C10.8229 18.7383 10.5344 19.0269 10.2162 19.2751C9.84082 19.5679 9.43469 19.8189 9.00498 20.0237C8.6407 20.1973 8.25352 20.3263 7.47918 20.5844L4.19792 21.6782M4.19792 21.6782L3.39584 21.9456C3.01478 22.0726 2.59466 21.9734 2.31063 21.6894C2.0266 21.4053 1.92743 20.9852 2.05445 20.6042L2.32181 19.8021M4.19792 21.6782L2.32181 19.8021" stroke="currentColor" strokeWidth="1.5"/>
+                  </svg>
+                </button>
+              )}
               {isEditing && (
                 <button
                   onMouseDown={(e) => {
@@ -276,11 +281,9 @@ export default function UserInfo() {
               </select>
             ) : (
               <input
-                key={field}
-                ref={inputRef}
                 type={type}
                 value={editValues[field] || ''}
-                onChange={handleChange}
+                onChange={(e) => handleInputChange(field, e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();

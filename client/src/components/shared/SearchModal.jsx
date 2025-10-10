@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
 const SearchModal = ({ isOpen, onClose }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -28,7 +30,16 @@ const SearchModal = ({ isOpen, onClose }) => {
       }
 
       const data = await response.json();
-      setSearchResults(data.items || []);
+      const items = data.items || [];
+      
+      // Eğer sonuç bulunamadıysa 404 sayfasına yönlendir
+      if (items.length === 0) {
+        handleClose();
+        navigate('/404');
+        return;
+      }
+      
+      setSearchResults(items);
     } catch (err) {
       console.error('Arama hatası:', err);
       setError(err.message || 'Arama işlemi sırasında bir hata oluştu');
@@ -165,7 +176,14 @@ const SearchModal = ({ isOpen, onClose }) => {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3, delay: index * 0.1 }}
-                      onClick={() => window.open(result.link, '_blank')}
+                      onClick={() => {
+                        if (result.link === '#' || !result.link) {
+                          handleClose();
+                          navigate('/404');
+                        } else {
+                          window.open(result.link, '_blank');
+                        }
+                      }}
                     >
                       <h3 className="text-white font-medium text-lg mb-2 hover:text-purple-300 transition-colors">
                         {result.title}
