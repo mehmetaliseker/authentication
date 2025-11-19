@@ -5,6 +5,8 @@ import Button from '../shared/Button';
 import { FormSkeleton } from '../shared/Skeleton';
 import Message from '../shared/Message';
 
+const API_BASE_URL = 'http://localhost:3001';
+
 export default function ForgotPasswordForm({ onBack, onResetPassword }) {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
@@ -20,7 +22,7 @@ export default function ForgotPasswordForm({ onBack, onResetPassword }) {
     setMessage('');
 
     try {
-      const response = await fetch('http://localhost:3001/auth/forgot-password', {
+      const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),

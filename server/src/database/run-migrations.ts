@@ -2,12 +2,23 @@ import { Pool } from 'pg';
 import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 
+const host = process.env.DB_HOST;
+const port = process.env.DB_PORT;
+const username = process.env.DB_USERNAME;
+const password = process.env.DB_PASSWORD;
+const database = process.env.DB_NAME || process.env.DB_DATABASE;
+
+if (!host || !port || !username || !password || !database) {
+  console.error('❌ Veritabanı yapılandırma bilgileri eksik. Lütfen .env dosyasını kontrol edin.');
+  process.exit(1);
+}
+
 const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5433'),
-  user: process.env.DB_USERNAME || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
-  database: process.env.DB_DATABASE || 'nestdeneme',
+  host,
+  port: parseInt(port),
+  user: username,
+  password,
+  database,
 });
 
 async function runMigrations() {
@@ -22,14 +33,31 @@ async function runMigrations() {
     const sql = readFileSync(join(migrationsDir, file), 'utf-8');
     console.log(`Running migration: ${file}`);
     try {
-      // SQL'i daha basit bir şekilde parse et - sadece noktalı virgül ile böl
-      const statements = sql
+      // SQL'i statement'lara böl ve tek tek çalıştır
+      // Önce yorumları temizle
+      let cleanSql = sql
+        .split('\n')
+        .map(line => {
+          // Satır içi yorumları temizle (-- ile başlayan)
+          const commentIndex = line.indexOf('--');
+          if (commentIndex !== -1) {
+            return line.substring(0, commentIndex);
+          }
+          return line;
+        })
+        .join('\n');
+      
+      // Block comment'leri temizle (/* ... */)
+      cleanSql = cleanSql.replace(/\/\*[\s\S]*?\*\//g, '');
+      
+      const statements = cleanSql
         .split(';')
         .map(stmt => stmt.trim())
-        .filter(stmt => stmt.length > 0 && !stmt.startsWith('--'));
+        .filter(stmt => stmt.length > 0);
 
       for (const statement of statements) {
         if (statement.trim()) {
+          console.log(`Executing: ${statement.substring(0, 50)}...`);
           await pool.query(statement);
         }
       }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { usePageAnimations, useBackgroundAnimations } from '../../hooks/useAnimations';
+import { usePageAnimations, useBackgroundAnimations } from './hooks/useAnimations';
 
 export default function AnimatedPage({ 
   children, 

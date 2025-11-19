@@ -9,9 +9,15 @@ export class GoogleSearchService implements ISearchService {
   private readonly baseUrl = 'https://www.googleapis.com/customsearch/v1';
 
   constructor(private readonly databaseService: DatabaseService) {
-    //Google Search API
-    this.apiKey = 'your-api-key'; // .env dosyasından 
-    this.searchEngineId = 'your-search-engine-id'; // .env dosyasından 
+    const apiKey = process.env.SEARCH_ENGINE_API_KEY;
+    const searchEngineId = process.env.GOOGLE_SEARCH_ENGINE_ID;
+
+    if (!apiKey || !searchEngineId) {
+      throw new Error('Google Search API yapılandırması eksik. Lütfen .env dosyasında SEARCH_ENGINE_API_KEY ve GOOGLE_SEARCH_ENGINE_ID değerlerini ayarlayın.');
+    }
+
+    this.apiKey = apiKey;
+    this.searchEngineId = searchEngineId;
     
     console.log('Google Search servisi başarıyla yapılandırıldı');
   }

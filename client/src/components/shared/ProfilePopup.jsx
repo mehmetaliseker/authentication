@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../auth/hooks/useAuth';
 import LogoutConfirmModal from './LogoutConfirmModal';
 
 export default function ProfilePopup({ isOpen, onClose, onProfileClick, onLogoutModalChange }) {

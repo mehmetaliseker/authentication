@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigation } from '../hooks/useAuth';
+import { useNavigation } from '../components/shared/hooks/useNavigation';
 import AnimatedPage from '../components/shared/AnimatedPage';
 import LogoutContent from '../components/auth/LogoutContent';
 import { pageConfigs } from '../config/pageConfigs';

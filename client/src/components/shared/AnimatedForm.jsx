@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { useFormAnimations } from '../../hooks/useAnimations';
+import { useFormAnimations } from './hooks/useAnimations';
 
 export default function AnimatedForm({ children, className = "" }) {
   const { containerVariants, headerVariants, fieldsVariants, footerVariants } = useFormAnimations();

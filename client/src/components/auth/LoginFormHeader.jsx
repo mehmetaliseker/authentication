@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigation } from '../../hooks/useAuth';
+import { useNavigation } from '../shared/hooks/useNavigation';
 import Button from '../shared/Button';
 
 export default function LoginFormHeader() {

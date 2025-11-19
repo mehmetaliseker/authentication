@@ -10,9 +10,32 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: nestdeneme
     ports:
-      - '5433:5432'
+      - '5432:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - postgres-network
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin4
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - '8080:80'
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - db
+    networks:
+      - postgres-network
 
 volumes:
   pgdata:
+  pgadmin_data:
+
+networks:
+  postgres-network:
+    driver: bridge

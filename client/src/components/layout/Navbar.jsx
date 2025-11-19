@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useAuth, useNavigation } from '../../hooks/useAuth';
+import { useAuth } from '../auth/hooks/useAuth';
+import { useNavigation } from '../shared/hooks/useNavigation';
 import ProfilePopup from '../shared/ProfilePopup';
 import TodoModal from '../todo/TodoModal';
 import SearchModal from '../shared/SearchModal';
+import FriendshipModal from '../shared/FriendshipModal';
 import userProfileIcon from '../../assets/basic-user-profile.svg';
+import addFriendIcon from '../../assets/addfriend_icon.svg';
 
 export default function Navbar() {
   const { user, isEditingProfile } = useAuth();
@@ -12,6 +15,7 @@ export default function Navbar() {
   const [isProfilePopupOpen, setIsProfilePopupOpen] = useState(false);
   const [isTodoModalOpen, setIsTodoModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [isFriendshipModalOpen, setIsFriendshipModalOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   const handleProfileClick = () => {
@@ -32,6 +36,17 @@ export default function Navbar() {
             
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">
+                <motion.button
+                  onClick={() => !isEditingProfile && setIsFriendshipModalOpen(true)}
+                  className={`${isEditingProfile ? 'bg-gray-500 cursor-not-allowed opacity-50' : 'bg-green-600 hover:bg-green-700'} text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2`}
+                  whileHover={!isEditingProfile ? { scale: 1.05 } : {}}
+                  whileTap={!isEditingProfile ? { scale: 0.95 } : {}}
+                  disabled={isEditingProfile}
+                >
+                  <img src={addFriendIcon} alt="İstekler" className="w-5 h-5" />
+                  İstekler
+                </motion.button>
+                
                 <motion.button
                   onClick={() => !isEditingProfile && setIsSearchModalOpen(true)}
                   className={`${isEditingProfile ? 'bg-gray-500 cursor-not-allowed opacity-50' : 'bg-blue-600 hover:bg-blue-700'} text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2`}
@@ -88,7 +103,7 @@ export default function Navbar() {
       </header>
       
       {/* Background Blur Overlay */}
-      {(isSearchModalOpen || isTodoModalOpen) && (
+      {(isSearchModalOpen || isTodoModalOpen || isFriendshipModalOpen) && (
         <motion.div
           className="fixed inset-0 z-40 backdrop-blur-md bg-black/30"
           initial={{ opacity: 0 }}
@@ -108,6 +123,12 @@ export default function Navbar() {
       <TodoModal 
         isOpen={isTodoModalOpen} 
         onClose={() => setIsTodoModalOpen(false)} 
+      />
+      
+      {/* Friendship Modal */}
+      <FriendshipModal 
+        isOpen={isFriendshipModalOpen} 
+        onClose={() => setIsFriendshipModalOpen(false)} 
       />
     </>
   );

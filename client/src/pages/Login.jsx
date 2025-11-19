@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigation } from '../hooks/useAuth';
+import { useNavigation } from '../components/shared/hooks/useNavigation';
 import { motion } from 'framer-motion';
 import LoginForm from '../components/auth/LoginForm';
 import ComputerScienceSVG from '../assets/Computer_science_education.svg';

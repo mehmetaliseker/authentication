@@ -14,15 +14,25 @@ export class DatabaseService {
   private pool: Pool;
 
   constructor() {
+    const host = process.env.DB_HOST;
+    const port = process.env.DB_PORT;
+    const username = process.env.DB_USERNAME;
+    const password = process.env.DB_PASSWORD;
+    const database = process.env.DB_NAME || process.env.DB_DATABASE;
+
+    if (!host || !port || !username || !password || !database) {
+      throw new Error('Veritabanı yapılandırma bilgileri eksik. Lütfen .env dosyasını kontrol edin.');
+    }
+
     const config: DatabaseConfig = {
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '5433'),
-      username: process.env.DB_USERNAME || 'postgres',
-      password: process.env.DB_PASSWORD || 'postgres',
-      database: 'nestdeneme'
+      host,
+      port: parseInt(port),
+      username,
+      password,
+      database
     };
 
-    console.log('🔌 Veritabanı bağlantısı:', config);
+    console.log(' Veritabanı bağlantısı kuruluyor...');
 
     this.pool = new Pool({
       host: config.host,

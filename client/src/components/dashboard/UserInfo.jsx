@@ -1,9 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../auth/hooks/useAuth';
 import { UserInfoSkeleton } from '../shared/Skeleton';
 import SaveIcon from '../../assets/save-icon.svg';
 import countries from '../../data/countries.json';
+
+const API_BASE_URL = 'http://localhost:3001';
 
 export default function UserInfo() {
   const { user, updateUser, setIsEditingProfile } = useAuth();
@@ -12,7 +14,7 @@ export default function UserInfo() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
-  const tooltipTimeoutRef = useRef(null);
+  const [tooltipTimeout, setTooltipTimeout] = useState(null);
 
   if (!user) {
     return <UserInfoSkeleton />;
@@ -124,7 +126,7 @@ export default function UserInfo() {
         }
       }
 
-      const response = await fetch('http://localhost:3001/auth/update-profile', {
+      const response = await fetch(`${API_BASE_URL}/auth/update-profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -158,23 +160,39 @@ export default function UserInfo() {
     }
   };
 
-  const handleInputChange = (field, value) => {
+  const handleInputChange = (field, value, cursorPosition = null) => {
+    // Cursor pozisyonunu kaydet
+    const activeElement = document.activeElement;
+    const shouldRestoreCursor = activeElement && (activeElement.type === 'text' || activeElement.type === 'email');
+    const savedCursorPosition = shouldRestoreCursor && cursorPosition !== null ? cursorPosition : (shouldRestoreCursor ? activeElement.selectionStart : null);
+    
     setEditValues(prev => ({
       ...prev,
       [field]: value
     }));
     setHasUnsavedChanges(value !== user[field]);
+    
+    // Cursor pozisyonunu geri yükle
+    if (shouldRestoreCursor && savedCursorPosition !== null) {
+      setTimeout(() => {
+        const inputElement = document.querySelector(`input[name="${field}"]`);
+        if (inputElement && document.activeElement === inputElement) {
+          inputElement.setSelectionRange(savedCursorPosition, savedCursorPosition);
+        }
+      }, 0);
+    }
   };
 
   const handleBlur = (field) => {
     if (hasUnsavedChanges) {
       setShowTooltip(true);
-      if (tooltipTimeoutRef.current) {
-        clearTimeout(tooltipTimeoutRef.current);
+      if (tooltipTimeout) {
+        clearTimeout(tooltipTimeout);
       }
-      tooltipTimeoutRef.current = setTimeout(() => {
+      const timeout = setTimeout(() => {
         setShowTooltip(false);
       }, 3000);
+      setTooltipTimeout(timeout);
     } else {
       setEditingField(null);
       setIsEditingProfile(false);
@@ -191,15 +209,30 @@ export default function UserInfo() {
 
   useEffect(() => {
     return () => {
-      if (tooltipTimeoutRef.current) {
-        clearTimeout(tooltipTimeoutRef.current);
+      if (tooltipTimeout) {
+        clearTimeout(tooltipTimeout);
       }
     };
-  }, []);
+  }, [tooltipTimeout]);
 
   const EditableField = ({ field, label, value, type = 'text', disabled = false }) => {
     const isEditing = editingField === field;
     const isOtherFieldEditing = editingField && editingField !== field;
+
+    // Input focus kontrolü için
+    useEffect(() => {
+      if (isEditing) {
+        const inputElement = document.querySelector(`input[name="${field}"], select[name="${field}"]`);
+        if (inputElement) {
+          inputElement.focus();
+          // Text input'larda cursor'u sonuna koyma
+          if (inputElement.type === 'text' || inputElement.type === 'email') {
+            const length = inputElement.value.length;
+            inputElement.setSelectionRange(length, length);
+          }
+        }
+      }
+    }, [isEditing, field]);
 
     // Doğum tarihi için özel değer formatı
     const getDisplayValue = () => {
@@ -257,8 +290,9 @@ export default function UserInfo() {
           <div className="relative">
             {field === 'country' ? (
               <select
+                name={field}
                 value={editValues[field] || ''}
-                onChange={(e) => handleInputChange(field, e.target.value)}
+                onChange={(e) => handleInputChange(field, e.target.value, null)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -269,7 +303,6 @@ export default function UserInfo() {
                 }}
                 onBlur={() => handleBlur(field)}
                 className="w-full text-white bg-white/20 p-3 rounded-lg border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                autoFocus
                 disabled={isUpdating}
               >
                 <option value="" className="bg-gray-800">Ülke seçin...</option>
@@ -281,9 +314,13 @@ export default function UserInfo() {
               </select>
             ) : (
               <input
+                name={field}
                 type={type}
                 value={editValues[field] || ''}
-                onChange={(e) => handleInputChange(field, e.target.value)}
+                onChange={(e) => {
+                  const cursorPos = e.target.selectionStart;
+                  handleInputChange(field, e.target.value, cursorPos);
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -294,7 +331,6 @@ export default function UserInfo() {
                 }}
                 onBlur={() => handleBlur(field)}
                 className="w-full text-white bg-white/20 p-3 rounded-lg border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                autoFocus
                 disabled={isUpdating}
               />
             )}

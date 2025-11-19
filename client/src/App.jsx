@@ -1,7 +1,8 @@
 import React, { useEffect, Suspense, lazy, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
-import { useAuth } from './hooks/useAuth';
+import { SocketProvider } from './contexts/SocketContext';
+import { useAuth } from './components/auth/hooks/useAuth';
 import AuthLayout from './components/layout/AuthLayout';
 import Navbar from './components/layout/Navbar';
 import WelcomeScreen from './components/shared/WelcomeScreen';
@@ -16,6 +17,7 @@ const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Logout = lazy(() => import('./pages/Logout'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Profile = lazy(() => import('./pages/Profile'));
+const Welcome = lazy(() => import('./pages/Welcome'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 function AppContent() {
@@ -50,7 +52,8 @@ function AppContent() {
               <Routes>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/profile" element={<Profile />} />
-                <Route path="/" element={<WelcomeScreen user={user} />} />
+                <Route path="/welcome" element={<Welcome />} />
+                <Route path="/" element={<Welcome />} />
                 <Route path="/login" element={<Navigate to="/" replace />} />
                 <Route path="/register" element={<Navigate to="/" replace />} />
                 <Route path="/forgot-password" element={<Navigate to="/" replace />} />
@@ -71,9 +74,8 @@ function AppContent() {
         ) : (
           /* Unauthenticated Layout */
           <Routes>
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            
             <Route path="/" element={<AuthLayout />}>
+              <Route index element={<Login />} />
               <Route path="login" element={<Login />} />
               <Route path="register" element={<Register />} />
               <Route path="forgot-password" element={<ForgotPassword />} />
@@ -81,8 +83,8 @@ function AppContent() {
               <Route path="logout" element={<Logout />} />
             </Route>
             
-            <Route path="/404" element={<NotFound />} />
-            <Route path="*" element={<NotFound />} />
+            {/* Giriş yapmamış kullanıcılar için geçersiz rotalar login'e yönlendirilir */}
+            <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         )}
       </Suspense>
@@ -93,7 +95,9 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <SocketProvider>
+        <AppContent />
+      </SocketProvider>
     </AuthProvider>
   );
 }

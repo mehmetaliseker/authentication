@@ -2,6 +2,8 @@ import React, { createContext, useState, useCallback } from 'react';
 import { signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
 import { auth, googleProvider } from '../config/firebase';
 
+const API_BASE_URL = 'http://localhost:3001';
+
 export const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
@@ -17,7 +19,7 @@ export function AuthProvider({ children }) {
     setMessage('');
     
     try {
-      const response = await fetch('http://localhost:3001/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -69,7 +71,7 @@ export function AuthProvider({ children }) {
     setMessage('');
     
     try {
-      const response = await fetch('http://localhost:3001/auth/register', {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
@@ -107,7 +109,7 @@ export function AuthProvider({ children }) {
       
       // Backend'e logout isteği gönder
       if (currentUser.id) {
-        const response = await fetch('http://localhost:3001/auth/logout', {
+        const response = await fetch(`${API_BASE_URL}/auth/logout`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: currentUser.id }),
@@ -151,7 +153,7 @@ export function AuthProvider({ children }) {
     try {
       const currentUser = user || JSON.parse(localStorage.getItem('user') || '{}');
       
-      const response = await fetch('http://localhost:3001/auth/update-profile', {
+      const response = await fetch(`${API_BASE_URL}/auth/update-profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -199,7 +201,7 @@ export function AuthProvider({ children }) {
       const idToken = await user.getIdToken();
       
       // Backend'e Firebase token'ını gönder
-      const response = await fetch('http://localhost:3001/auth/firebase/verify', {
+      const response = await fetch(`${API_BASE_URL}/auth/firebase/verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

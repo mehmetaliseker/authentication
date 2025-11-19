@@ -6,9 +6,12 @@ import 'dotenv/config';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // CORS ayarları ekle
+  // CORS ayarları
+  const corsOrigins = process.env.CORS_ORIGINS;
+  const allowedOrigins = corsOrigins ? corsOrigins.split(',').map(origin => origin.trim()) : ['http://localhost:5173', 'http://localhost:5174'];
+
   app.enableCors({
-    origin: 'http://localhost:5173', // Frontend Vite URL
+    origin: allowedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -21,9 +24,12 @@ async function bootstrap() {
   }));
 
   const port = process.env.PORT || 3001;
-  await app.listen(port);
-  console.log(`🚀 Server ${port} portunda çalışıyor`);
-  console.log(`🌐 Frontend: http://localhost:5173`);
-  console.log(`🔧 Backend API: http://localhost:${port}`);
+  const frontendPort = process.env.FRONTEND_PORT || 5173;
+  await app.listen(parseInt(port.toString()));
+  
+  console.log('\n🚀 Server başlatıldı!\n');
+  console.log(`🔗 Backend API: http://localhost:${port}`);
+  console.log(`🔗 Frontend URL: http://localhost:${frontendPort}`);
+  console.log('\n');
 }
 bootstrap();

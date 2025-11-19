@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useAuth, useForm, useNavigation } from '../hooks/useAuth';
+import { useAuth } from '../components/auth/hooks/useAuth';
+import { useForm } from '../components/auth/hooks/useForm';
+import { useNavigation } from '../components/shared/hooks/useNavigation';
 import { Navigate } from 'react-router-dom';
 import Button from '../components/shared/Button';
 import Input from '../components/shared/Input';

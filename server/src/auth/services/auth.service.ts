@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException, ConflictException, InternalServerErr
 import { UserRepository } from '../repositories/user.repository';
 import { PasswordResetRepository } from '../repositories/password-reset.repository';
 import { LogoutLogRepository } from '../repositories/logout-log.repository';
+import { UserLoginLogService } from './user-login-log.service';
 import { JwtService } from './jwt.service';
 import { FirebaseService } from './firebase.service';
 import { RegisterDto } from '../dtos/register.dto';
@@ -17,6 +18,7 @@ export class AuthService {
     private readonly userRepository: UserRepository,
     private readonly passwordResetRepository: PasswordResetRepository,
     private readonly logoutLogRepository: LogoutLogRepository,
+    private readonly userLoginLogService: UserLoginLogService,
     private readonly jwtService: JwtService,
     private readonly firebaseService: FirebaseService,
   ) { }
@@ -110,12 +112,36 @@ export class AuthService {
         }
 
         await this.userRepository.updateFailedAttempts(user.id, newFailedAttempts, shouldLock, lockedUntil || undefined);
+        
+        // Başarısız login log kaydet
+        try {
+          await this.userLoginLogService.createLoginLog({
+            user_id: user.id,
+            login_method: 'email',
+            success: false
+          });
+        } catch (logError) {
+          console.error('Login log kaydetme hatası:', logError);
+        }
+        
         throw new UnauthorizedException('Geçersiz email veya şifre');
       }
 
       // Başarılı login - hesabı aç ve deneme sayısını sıfırla
       await this.userRepository.updateFailedAttempts(user.id, 0, false, undefined);
       await this.userRepository.updateLastLogin(user.id);
+
+      // Login log kaydet
+      try {
+        await this.userLoginLogService.createLoginLog({
+          user_id: user.id,
+          login_method: 'email',
+          success: true
+        });
+      } catch (logError) {
+        console.error('Login log kaydetme hatası:', logError);
+        // Log hatası login'i engellemez
+      }
 
       // JWT token çifti oluştur
       const tokenPair = this.jwtService.generateTokenPair({
@@ -453,6 +479,18 @@ export class AuthService {
         sub: user.id,
         email: user.email
       });
+
+      // Firebase login log kaydet
+      try {
+        await this.userLoginLogService.createLoginLog({
+          user_id: user.id,
+          login_method: 'firebase',
+          success: true
+        });
+      } catch (logError) {
+        console.error('Firebase login log kaydetme hatası:', logError);
+        // Log hatası login'i engellemez
+      }
 
       // Hassas bilgileri çıkar
       const { password_hash, ...userWithoutPassword } = user;

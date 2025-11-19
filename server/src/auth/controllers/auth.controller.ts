@@ -1,5 +1,6 @@
 import { Body, Controller, Post, Param, Get, Req, UseGuards, Put, Query, Res } from '@nestjs/common';
 import { AuthService } from '../services/auth.service';
+import { UserLoginLogService } from '../services/user-login-log.service';
 import { RegisterDto } from '../dtos/register.dto';
 import { LoginDto } from '../dtos/login.dto';
 import { ForgotPasswordDto } from '../dtos/forgot-password.dto';
@@ -9,7 +10,10 @@ import type { Request, Response } from 'express';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly userLoginLogService: UserLoginLogService
+  ) {}
 
   @Post('register')
   register(@Body() dto: RegisterDto) {
@@ -58,4 +62,23 @@ export class AuthController {
   async verifyFirebaseToken(@Body() body: { idToken: string }) {
     return this.authService.verifyFirebaseToken(body.idToken);
   }
+
+  @Get('login-stats/:userId')
+  async getLoginStats(
+    @Param('userId') userId: number,
+    @Query('period') period: 'weekly' | 'monthly' | '6months' | 'yearly' = 'monthly'
+  ) {
+    return this.userLoginLogService.getLoginStats(userId, period);
+  }
+
+  @Get('login-stats/:userId/total')
+  async getTotalLogins(@Param('userId') userId: number) {
+    return this.userLoginLogService.getTotalLogins(userId);
+  }
+
+  @Get('login-stats/:userId/last')
+  async getLastLogin(@Param('userId') userId: number) {
+    return this.userLoginLogService.getLastLogin(userId);
+  }
+
 }

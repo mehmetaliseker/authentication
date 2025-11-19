@@ -1,5 +1,6 @@
 import React from 'react';
-import { useRouteParams, useNavigation } from '../hooks/useAuth';
+import { useRouteParams } from '../components/shared/hooks/useRouteParams';
+import { useNavigation } from '../components/shared/hooks/useNavigation';
 import AnimatedPage from '../components/shared/AnimatedPage';
 import ResetPasswordForm from '../components/auth/ResetPasswordForm';
 import { pageConfigs } from '../config/pageConfigs';

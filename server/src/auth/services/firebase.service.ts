@@ -11,16 +11,24 @@ export class FirebaseService {
 
   private initializeFirebase(): void {
     if (!admin.apps.length) {
-      // Hardcoded Firebase yapılandırması
-      const privateKey = `your-private-key`;
-      
-      const clientEmail = 'your-client-email';
+      const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+      const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+
+      if (!privateKey || !clientEmail) {
+        throw new Error('Firebase yapılandırması eksik. Lütfen .env dosyasında FIREBASE_PRIVATE_KEY ve FIREBASE_CLIENT_EMAIL değerlerini ayarlayın.');
+      }
+
+      // Private key'deki \n karakterlerini düzgün parse et
+      const formattedPrivateKey = privateKey.replace(/\\n/g, '\n');
+
+      // Project ID'yi client email'den çıkar
+      const projectId = clientEmail.split('@')[1]?.split('.')[0] || 'authentication-33eb6';
 
       this.app = admin.initializeApp({
         credential: admin.credential.cert({
-          projectId: 'authentication-33eb6',
-          privateKey: privateKey,
-          clientEmail: clientEmail,
+          projectId,
+          privateKey: formattedPrivateKey,
+          clientEmail,
         }),
       });
 

@@ -1,13 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../components/auth/hooks/useAuth';
 
 export default function NotFound() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAuthenticated } = useAuth();
   const [countdown, setCountdown] = useState(10);
 
+  // Giriş yapmamış kullanıcıları login sayfasına yönlendir
   useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+
+  useEffect(() => {
+    // Sadece giriş yapmış kullanıcılar için geri sayım başlat
+    if (!isAuthenticated) return;
+
     const timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
@@ -20,7 +32,7 @@ export default function NotFound() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [navigate]);
+  }, [navigate, isAuthenticated]);
 
   const handleGoHome = () => {
     navigate('/');
@@ -29,6 +41,11 @@ export default function NotFound() {
   const handleGoBack = () => {
     navigate(-1);
   };
+
+  // Giriş yapmamış kullanıcılar hiçbir şey görmesin
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden flex items-center justify-center">

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useAuth, useNavigation } from '../../hooks/useAuth';
+import { useAuth } from '../auth/hooks/useAuth';
+import { useNavigation } from '../shared/hooks/useNavigation';
 import Button from '../shared/Button';
 import TodoModal from '../todo/TodoModal';
 import SearchModal from '../shared/SearchModal';

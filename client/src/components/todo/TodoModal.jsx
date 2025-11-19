@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../auth/hooks/useAuth';
+import { useTodos } from './hooks/useTodos';
 
 const TodoModal = ({ isOpen, onClose }) => {
   const { user } = useAuth();
-  const [todos, setTodos] = useState([]);
   const [newTodo, setNewTodo] = useState('');
   const [filter, setFilter] = useState('all');
-  const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState('');
   const [showFilterInput, setShowFilterInput] = useState(false);
   const [filterText, setFilterText] = useState('');
   const [editingTodoId, setEditingTodoId] = useState(null);
   const [editingText, setEditingText] = useState('');
   const [deletingTodoId, setDeletingTodoId] = useState(null);
+  
+  const { todos, loading: isLoading, error: todosError, message, setMessage, loadTodos, addTodo: addTodoToAPI, toggleTodo: toggleTodoAPI, deleteTodo: deleteTodoAPI, updateTodo } = useTodos(filter);
 
   // Message'ı temizle
   useEffect(() => {
@@ -25,136 +25,6 @@ const TodoModal = ({ isOpen, onClose }) => {
     }
   }, [message]);
 
-  // Todo'ları yükle
-  const loadTodos = async () => {
-    if (!user?.id) {
-      console.log('Todo yükleme - Kullanıcı giriş yapmamış');
-      return;
-    }
-    
-    const token = localStorage.getItem('accessToken');
-    console.log('Token kontrolü:', { token: token ? 'Mevcut' : 'Yok', userId: user?.id });
-    
-    setIsLoading(true);
-    try {
-      const response = await fetch(`http://localhost:3001/todos?status=${filter}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      console.log('Todo yükleme yanıtı:', response.status, response.statusText);
-      
-      if (response.status === 401) {
-        console.error('401 Unauthorized - Token geçersiz');
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        setMessage('Oturum süreniz dolmuş. Lütfen tekrar giriş yapın.');
-        return;
-      }
-      
-      const data = await response.json();
-      if (data.success) {
-        setTodos(data.data);
-      }
-    } catch (error) {
-      console.error('Todo yükleme hatası:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Todo ekle
-  const addTodo = async () => {
-    if (!newTodo.trim() || !user?.id) return;
-
-    const token = localStorage.getItem('accessToken');
-    console.log('Todo ekleme - Token kontrolü:', { token: token ? 'Mevcut' : 'Yok', userId: user?.id });
-
-    try {
-      const response = await fetch('http://localhost:3001/todos', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ title: newTodo.trim() }),
-      });
-      
-      console.log('Todo ekleme yanıtı:', response.status, response.statusText);
-      
-      if (response.status === 401) {
-        console.error('401 Unauthorized - Token geçersiz');
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        setMessage('Oturum süreniz dolmuş. Lütfen tekrar giriş yapın.');
-        return;
-      }
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setNewTodo('');
-        // Yeni eklenen todo default olarak pending olmalı
-        setTodos((prev) => [
-          { ...data.data, status: data.data?.status || 'pending' },
-          ...prev
-        ]);
-        loadTodos();
-      } else {
-        console.error('Todo ekleme başarısız:', data.message);
-      }
-    } catch (error) {
-      console.error('Todo ekleme hatası:', error);
-    }
-  };
-
-  // Todo durumunu değiştir
-  const toggleTodo = async (id) => {
-    try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`http://localhost:3001/todos/${id}/toggle`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.status === 401) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        setMessage('Oturum süreniz dolmuş. Lütfen tekrar giriş yapın.');
-        return;
-      }
-
-      const data = await response.json();
-      if (response.ok && data.success) {
-        // İyimser güncelleme
-        setTodos((prev) => prev.map((t) => {
-          if (t.id !== id) return t;
-          const wasCompleted = t.status === 'completed';
-          return {
-            ...t,
-            status: wasCompleted ? 'pending' : 'completed',
-            completed_at: wasCompleted ? null : new Date().toISOString(),
-            deleted_at: null
-          };
-        }));
-        // Sunucu ile senkronize et
-        loadTodos();
-      } else {
-        setMessage(data?.message || 'Görev güncellenemedi.');
-      }
-    } catch (error) {
-      console.error('Todo güncelleme hatası:', error);
-      setMessage('Beklenmeyen bir hata oluştu.');
-    }
-  };
 
   // Todo silme onayı
   const confirmDelete = (id) => {
@@ -163,46 +33,6 @@ const TodoModal = ({ isOpen, onClose }) => {
 
   const cancelDelete = () => {
     setDeletingTodoId(null);
-  };
-
-  // Todo sil
-  const deleteTodo = async (id) => {
-    try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`http://localhost:3001/todos/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.status === 401) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        setMessage('Oturum süreniz dolmuş. Lütfen tekrar giriş yapın.');
-        return;
-      }
-
-      const data = await response.json();
-      if (response.ok && data.success) {
-        // İyimser güncelleme
-        setTodos((prev) => prev.map((t) => (
-          t.id === id
-            ? { ...t, status: 'deleted', deleted_at: new Date().toISOString() }
-            : t
-        )));
-        setDeletingTodoId(null);
-        // Sunucu ile senkronize et
-        loadTodos();
-      } else {
-        setMessage(data?.message || 'Görev silinemedi.');
-      }
-    } catch (error) {
-      console.error('Todo silme hatası:', error);
-      setMessage('Beklenmeyen bir hata oluştu.');
-    }
   };
 
   // Todo düzenle
@@ -216,60 +46,39 @@ const TodoModal = ({ isOpen, onClose }) => {
     setEditingText('');
   };
 
-  const saveEdit = async (id) => {
-    if (!editingText.trim()) {
-      setMessage('Todo başlığı boş olamaz.');
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`http://localhost:3001/todos/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ title: editingText.trim() }),
-      });
-
-      if (response.status === 401) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        setMessage('Oturum süreniz dolmuş. Lütfen tekrar giriş yapın.');
-        return;
-      }
-
-      const data = await response.json();
-      if (response.ok && data.success) {
-        // İyimser güncelleme
-        setTodos((prev) => prev.map((t) => (
-          t.id === id ? { ...t, title: editingText.trim() } : t
-        )));
-        cancelEditing();
-        loadTodos();
-      } else {
-        setMessage(data?.message || 'Görev güncellenemedi.');
-      }
-    } catch (error) {
-      console.error('Todo düzenleme hatası:', error);
-      setMessage('Beklenmeyen bir hata oluştu.');
+  // Enter tuşu ile todo ekle
+  const handleKeyPress = async (e) => {
+    if (e.key === 'Enter') {
+      await handleAddTodo();
     }
   };
 
-  // Enter tuşu ile todo ekle
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      addTodo();
-    }
+  const handleAddTodo = async () => {
+    if (!newTodo.trim() || !user?.id) return;
+    await addTodoToAPI(newTodo);
+    setNewTodo('');
+  };
+
+  const handleToggleTodo = async (id) => {
+    await toggleTodoAPI(id);
+  };
+
+  const handleDeleteTodo = async (id) => {
+    await deleteTodoAPI(id);
+    setDeletingTodoId(null);
+  };
+
+  const handleSaveEdit = async (id) => {
+    await updateTodo(id, editingText);
+    cancelEditing();
   };
 
   // Filter değiştiğinde todo'ları yeniden yükle
   useEffect(() => {
-    if (isOpen) {
-      loadTodos();
+    if (isOpen && user?.id) {
+      loadTodos().catch(err => console.error('Todo yükleme hatası:', err));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, filter]);
 
   // 12 saat sonra otomatik silme kontrolü - backend'te yapılıyor, frontend sadece listeyi yeniler
@@ -277,14 +86,15 @@ const TodoModal = ({ isOpen, onClose }) => {
     const checkAndReloadTodos = () => {
       // Backend otomatik olarak completed todo'ları 12 saat sonra deleted yapar
       // Frontend sadece listeyi yeniden yükler
-      if (isOpen) {
-        loadTodos();
+      if (isOpen && user?.id) {
+        loadTodos().catch(err => console.error('Todo yükleme hatası:', err));
       }
     };
 
     const interval = setInterval(checkAndReloadTodos, 300000); // Her 5 dakikada bir kontrol et
     return () => clearInterval(interval);
-  }, [isOpen, filter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   const filteredTodos = todos.filter(todo => {
     // Önce status filtresi uygula
@@ -395,7 +205,7 @@ const TodoModal = ({ isOpen, onClose }) => {
                     }}
                   />
                   <button
-                    onClick={addTodo}
+                    onClick={handleAddTodo}
                     disabled={!newTodo.trim()}
                     className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-medium transition-colors"
                   >
@@ -525,7 +335,7 @@ const TodoModal = ({ isOpen, onClose }) => {
                         transition={{ duration: 0.3 }}
                       >
                         <button
-                          onClick={() => todo.status !== 'deleted' ? toggleTodo(todo.id) : null}
+                          onClick={() => todo.status !== 'deleted' ? handleToggleTodo(todo.id) : null}
                           disabled={todo.status === 'deleted'}
                           className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0 mt-0.5 ${
                             todo.status === 'completed'
@@ -555,14 +365,14 @@ const TodoModal = ({ isOpen, onClose }) => {
                                 value={editingText}
                                 onChange={(e) => setEditingText(e.target.value)}
                                 onKeyPress={(e) => {
-                                  if (e.key === 'Enter') saveEdit(todo.id);
+                                  if (e.key === 'Enter') handleSaveEdit(todo.id);
                                   if (e.key === 'Escape') cancelEditing();
                                 }}
                                 className="flex-1 bg-slate-600/50 text-white px-2 py-1 rounded border border-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
                                 autoFocus
                               />
                               <button
-                                onClick={() => saveEdit(todo.id)}
+                                onClick={() => handleSaveEdit(todo.id)}
                                 className="text-green-400 hover:text-green-300 transition-colors p-1"
                                 title="Kaydet"
                               >
@@ -635,7 +445,7 @@ const TodoModal = ({ isOpen, onClose }) => {
                           >
                             <span className="text-xs text-slate-300 whitespace-nowrap">Emin misiniz?</span>
                             <button
-                              onClick={() => deleteTodo(todo.id)}
+                              onClick={() => handleDeleteTodo(todo.id)}
                               className="text-green-400 hover:text-green-300 transition-colors p-1"
                               title="Evet, sil"
                             >

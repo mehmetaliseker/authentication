@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { useInputAnimations } from '../../hooks/useAnimations';
+import { useInputAnimations } from './hooks/useAnimations';
 import Input from './Input';
 
 export default function AnimatedInput({ 

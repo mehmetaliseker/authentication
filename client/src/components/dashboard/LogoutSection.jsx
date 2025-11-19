@@ -1,6 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { useAuth, useForm, useNavigation } from '../../hooks/useAuth';
+import { useAuth } from '../auth/hooks/useAuth';
+import { useForm } from '../auth/hooks/useForm';
+import { useNavigation } from '../../shared/hooks/useNavigation';
 import LogoutSectionWarning from './LogoutSectionWarning';
 import LogoutSectionButtons from './LogoutSectionButtons';
 

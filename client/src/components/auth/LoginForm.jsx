@@ -1,5 +1,7 @@
 import React from 'react';
-import { useAuth, useForm, useNavigation } from '../../hooks/useAuth';
+import { useAuth } from './hooks/useAuth';
+import { useForm } from './hooks/useForm';
+import { useNavigation } from '../shared/hooks/useNavigation';
 import { Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Input from '../shared/Input';
@@ -111,6 +113,18 @@ export default function LoginForm({ onForgotPassword }) {
 
 
 
+        {/* Giriş Yap Butonu */}
+        <motion.div>
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={isLoading || isSubmitting}
+            className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg font-medium transition-all duration-200"
+          >
+            {isLoading || isSubmitting ? 'Giriş yapılıyor...' : 'Giriş Yap'}
+          </Button>
+        </motion.div>
+
         {/* Google ve Firebase ile Giriş Butonları */}
         <motion.div className="grid grid-cols-2 gap-3 pb-3">
           {/* Google ile Giriş - Sadece Görsel */}
@@ -144,19 +158,6 @@ export default function LoginForm({ onForgotPassword }) {
           </Button>
         </motion.div>
       </motion.form>
-
-
-      {/* Giriş Yap Butonu */}
-      <motion.div>
-        <Button
-          type="submit"
-          variant="primary"
-          disabled={isLoading || isSubmitting}
-          className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg font-medium transition-all duration-200"
-        >
-          {isLoading || isSubmitting ? 'Giriş yapılıyor...' : 'Giriş Yap'}
-        </Button>
-      </motion.div>
 
 
       {/* Kayıt Ol Linki */}

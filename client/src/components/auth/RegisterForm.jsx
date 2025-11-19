@@ -1,5 +1,7 @@
 import React from 'react';
-import { useAuth, useForm, useNavigation } from '../../hooks/useAuth';
+import { useAuth } from './hooks/useAuth';
+import { useForm } from './hooks/useForm';
+import { useNavigation } from '../shared/hooks/useNavigation';
 import { motion } from 'framer-motion';
 import Input from '../shared/Input';
 import Button from '../shared/Button';

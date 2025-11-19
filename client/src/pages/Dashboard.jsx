@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../components/auth/hooks/useAuth';
 import UserInfo from '../components/dashboard/UserInfo';
 import { DashboardSkeleton } from '../components/shared/Skeleton';
 
