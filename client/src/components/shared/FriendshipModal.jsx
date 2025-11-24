@@ -167,7 +167,8 @@ export default function FriendshipModal({ isOpen, onClose }) {
 }
 
 function UserItem({ user, currentUserId, onAction, confirmingAction, actionUser, onConfirm, onCancel }) {
-  const status = user.friendship_status;
+  // friendship_status null, undefined veya 'none' ise 'none' olarak kabul et
+  const status = user.friendship_status || 'none';
   const isConfirming = confirmingAction && actionUser?.id === user.id;
 
   const renderActionButtons = () => {
@@ -229,8 +230,21 @@ function UserItem({ user, currentUserId, onAction, confirmingAction, actionUser,
           <span className="text-sm text-green-400 font-medium">Arkadaş</span>
         );
 
+      case 'rejected':
+      case 'cancelled':
       default:
-        return null;
+        // İptal edilmiş, reddedilmiş veya bilinmeyen durumlar için + iconu göster
+        return (
+          <ActionButton
+            icon={
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            }
+            tooltip="Arkadaş Ekle"
+            onClick={() => onAction('send', user.id)}
+          />
+        );
     }
   };
 

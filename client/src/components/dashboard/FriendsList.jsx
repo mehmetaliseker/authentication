@@ -71,6 +71,40 @@ export default function FriendsList() {
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-3">
+        {/* Chatbot Seçeneği */}
+        <motion.div
+          className="flex items-center justify-between p-4 rounded-lg border bg-gradient-to-r from-purple-600/50 to-blue-600/50 border-purple-500/50 hover:from-purple-600/70 hover:to-blue-600/70 transition-colors cursor-pointer"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+          onClick={() => {
+            setSelectedFriend({ id: 'chatbot', first_name: 'Chatbot', last_name: '', email: 'Yapay Zeka Asistanı', isChatbot: true });
+            setIsMessageModalOpen(true);
+          }}
+        >
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+              <span className="text-white font-bold text-sm">AI</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-semibold truncate">
+                Chatbot ile Sohbet Et
+              </p>
+              <p className="text-slate-200 text-sm truncate">Yapay Zeka Asistanı</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <motion.button
+              className="text-white hover:text-purple-200 transition-colors p-2 rounded-lg hover:bg-white/10"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              title="Chatbot ile Sohbet Et"
+            >
+              <img src={messageIcon} alt="Mesaj" className="w-5 h-5" />
+            </motion.button>
+          </div>
+        </motion.div>
+
         {friendsLoading ? (
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-purple-500 border-t-transparent mx-auto"></div>

@@ -2,21 +2,30 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../auth/hooks/useAuth';
 import { useMessages } from '../../hooks/useMessages';
+import { useChatbot } from '../../hooks/useChatbot';
 import messageIcon from '../../assets/message_icon.svg';
 
 export default function MessageModal({ isOpen, onClose, friend }) {
   const { user } = useAuth();
-  const { messages, loading, error, message, setMessage, loadConversation, sendMessage, deleteMessage } = useMessages();
+  const isChatbot = friend?.isChatbot || friend?.id === 'chatbot';
+  const regularMessages = useMessages();
+  const chatbotMessages = useChatbot();
+  
+  const { messages, loading, error, message, setMessage, loadConversation, sendMessage } = isChatbot ? chatbotMessages : regularMessages;
   const [messageText, setMessageText] = useState('');
   const messagesEndRef = useRef(null);
   const [deletingMessageId, setDeletingMessageId] = useState(null);
 
   useEffect(() => {
     if (isOpen && friend && user?.id) {
-      const otherUserId = friend.id;
-      loadConversation(user.id, otherUserId, user.id).catch(err => console.error('Mesaj yükleme hatası:', err));
+      if (isChatbot) {
+        loadConversation(user.id).catch(err => console.error('Chatbot mesaj yükleme hatası:', err));
+      } else {
+        const otherUserId = friend.id;
+        loadConversation(user.id, otherUserId, user.id).catch(err => console.error('Mesaj yükleme hatası:', err));
+      }
     }
-  }, [isOpen, friend, user?.id, loadConversation]);
+  }, [isOpen, friend, user?.id, loadConversation, isChatbot]);
 
   useEffect(() => {
     // Mesajlar güncellendiğinde en alta scroll yap
@@ -42,10 +51,17 @@ export default function MessageModal({ isOpen, onClose, friend }) {
   const handleSendMessage = async () => {
     if (!messageText.trim() || !friend || !user?.id) return;
 
-    const success = await sendMessage(user.id, friend.id, messageText);
-    if (success) {
-      setMessageText('');
-      // Socket.io ile mesaj otomatik olarak eklenecek, tekrar yüklemeye gerek yok
+    if (isChatbot) {
+      const success = await sendMessage(user.id, messageText);
+      if (success) {
+        setMessageText('');
+      }
+    } else {
+      const success = await sendMessage(user.id, friend.id, messageText);
+      if (success) {
+        setMessageText('');
+        // Socket.io ile mesaj otomatik olarak eklenecek, tekrar yüklemeye gerek yok
+      }
     }
   };
 
@@ -57,9 +73,9 @@ export default function MessageModal({ isOpen, onClose, friend }) {
   };
 
   const handleDeleteMessage = async (messageId) => {
-    if (!user?.id) return;
+    if (!user?.id || isChatbot) return; // Chatbot mesajları silinemez
     
-    const success = await deleteMessage(messageId, user.id);
+    const success = await regularMessages.deleteMessage(messageId, user.id);
     if (success) {
       setDeletingMessageId(null);
       // Socket.io ile mesaj otomatik olarak silinecek, tekrar yüklemeye gerek yok
@@ -93,9 +109,9 @@ export default function MessageModal({ isOpen, onClose, friend }) {
                 <img src={messageIcon} alt="Mesaj" className="w-6 h-6" />
                 <div>
                   <h2 className="text-xl font-bold text-white">
-                    {friend.first_name} {friend.last_name}
+                    {isChatbot ? 'Chatbot ile Sohbet' : `${friend.first_name} ${friend.last_name}`}
                   </h2>
-                  <p className="text-sm text-slate-400">{friend.email}</p>
+                  <p className="text-sm text-slate-400">{isChatbot ? 'Yapay Zeka Asistanı' : friend.email}</p>
                 </div>
               </div>
               <button
@@ -133,67 +149,94 @@ export default function MessageModal({ isOpen, onClose, friend }) {
               </div>
             ) : (
               messages.map((msg) => {
-                const isOwnMessage = msg.sender_id === user?.id;
-                return (
-                  <motion.div
-                    key={msg.id}
-                    className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                  >
-                    <div className={`flex items-start gap-2 max-w-[75%] ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
-                      <div
-                        className={`rounded-lg px-4 py-2 ${
-                          isOwnMessage
-                            ? 'bg-purple-600 text-white'
-                            : 'bg-slate-700 text-slate-200'
-                        }`}
-                      >
-                        <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
-                        <p className={`text-xs mt-1 ${isOwnMessage ? 'text-purple-200' : 'text-slate-400'}`}>
-                          {new Date(msg.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                      {isOwnMessage && (
-                        <div className="flex items-center">
-                          {deletingMessageId === msg.id ? (
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-slate-300">Sil?</span>
-                              <button
-                                onClick={() => handleDeleteMessage(msg.id)}
-                                className="text-green-400 hover:text-green-300 p-1"
-                                title="Evet"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
-                              </button>
-                              <button
-                                onClick={() => setDeletingMessageId(null)}
-                                className="text-slate-400 hover:text-slate-300 p-1"
-                                title="Hayır"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => setDeletingMessageId(msg.id)}
-                              className="text-slate-400 hover:text-red-400 p-1"
-                              title="Sil"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
-                          )}
+                if (isChatbot) {
+                  const isUserMessage = msg.message_type === 'user';
+                  return (
+                    <motion.div
+                      key={msg.id}
+                      className={`flex ${isUserMessage ? 'justify-end' : 'justify-start'}`}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                    >
+                      <div className={`flex items-start gap-2 max-w-[75%] ${isUserMessage ? 'flex-row-reverse' : 'flex-row'}`}>
+                        <div
+                          className={`rounded-lg px-4 py-2 ${
+                            isUserMessage
+                              ? 'bg-purple-600 text-white'
+                              : 'bg-slate-700 text-slate-200'
+                          }`}
+                        >
+                          <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                          <p className={`text-xs mt-1 ${isUserMessage ? 'text-purple-200' : 'text-slate-400'}`}>
+                            {new Date(msg.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
                         </div>
-                      )}
-                    </div>
-                  </motion.div>
-                );
+                      </div>
+                    </motion.div>
+                  );
+                } else {
+                  const isOwnMessage = msg.sender_id === user?.id;
+                  return (
+                    <motion.div
+                      key={msg.id}
+                      className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                    >
+                      <div className={`flex items-start gap-2 max-w-[75%] ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
+                        <div
+                          className={`rounded-lg px-4 py-2 ${
+                            isOwnMessage
+                              ? 'bg-purple-600 text-white'
+                              : 'bg-slate-700 text-slate-200'
+                          }`}
+                        >
+                          <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                          <p className={`text-xs mt-1 ${isOwnMessage ? 'text-purple-200' : 'text-slate-400'}`}>
+                            {new Date(msg.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                        {isOwnMessage && (
+                          <div className="flex items-center">
+                            {deletingMessageId === msg.id ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-slate-300">Sil?</span>
+                                <button
+                                  onClick={() => handleDeleteMessage(msg.id)}
+                                  className="text-green-400 hover:text-green-300 p-1"
+                                  title="Evet"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={() => setDeletingMessageId(null)}
+                                  className="text-slate-400 hover:text-slate-300 p-1"
+                                  title="Hayır"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setDeletingMessageId(msg.id)}
+                                className="text-slate-400 hover:text-red-400 p-1"
+                                title="Sil"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                }
               })
             )}
             <div ref={messagesEndRef} />

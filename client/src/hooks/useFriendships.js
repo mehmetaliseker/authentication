@@ -247,14 +247,14 @@ export function useFriendships() {
 
       const data = await response.json();
       if (response.ok) {
-        // Kullanıcı listesini güncelle
+        // Kullanıcı listesini güncelle - iptal edildikten sonra 'none' durumuna döndür
         setUsers((prev) => prev.map((user) => {
           if (user.friendship_id === friendshipId) {
             return {
               ...user,
               friendship_status: 'none',
-              friendship_id: undefined,
-              requester_id: undefined,
+              friendship_id: null,
+              requester_id: null,
             };
           }
           return user;
