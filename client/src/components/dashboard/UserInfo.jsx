@@ -56,6 +56,10 @@ export default function UserInfo() {
   };
 
   const handleEdit = (field) => {
+    // Firebase kullanıcıları email düzenleyemez
+    if (field === 'email' && (user.firebase_uid || user.is_verified)) {
+      return;
+    }
     setEditingField(field);
     setIsEditingProfile(true);
     setHasUnsavedChanges(false);
@@ -81,6 +85,13 @@ export default function UserInfo() {
       setEditingField(null);
       setIsEditingProfile(false);
       setHasUnsavedChanges(false);
+      return;
+    }
+
+    // Firebase ile giriş yapmış kullanıcılar email değiştiremez
+    if (field === 'email' && (user.firebase_uid || user.is_verified)) {
+      alert('Google ile giriş yapan kullanıcılar email adresini değiştiremez.');
+      handleCancel(field);
       return;
     }
 
@@ -218,6 +229,9 @@ export default function UserInfo() {
   const EditableField = ({ field, label, value, type = 'text', disabled = false }) => {
     const isEditing = editingField === field;
     const isOtherFieldEditing = editingField && editingField !== field;
+    // Email alanı için Firebase kullanıcısı kontrolü - düzenleme butonu tamamen kaldırılacak
+    const isEmailFieldDisabled = field === 'email' && (user.firebase_uid || user.is_verified);
+    const isFieldDisabled = disabled || isEmailFieldDisabled;
 
     // Input focus kontrolü için
     useEffect(() => {
@@ -256,7 +270,7 @@ export default function UserInfo() {
           <label className="block text-sm font-medium text-white/80">
             {label}
           </label>
-          {!disabled && (
+          {!isFieldDisabled && (
             <div className="flex items-center gap-2">
               {!isEditing && (
                 <button
@@ -347,7 +361,7 @@ export default function UserInfo() {
             )}
           </div>
         ) : (
-          <p className={`text-white p-3 rounded-lg border border-white/20 ${disabled ? 'bg-white/5 cursor-not-allowed' : 'bg-white/10'}`}>
+          <p className={`text-white p-3 rounded-lg border border-white/20 ${isFieldDisabled ? 'bg-white/5 cursor-not-allowed' : 'bg-white/10'}`}>
             {getDisplayValue()}
           </p>
         )}
@@ -379,7 +393,7 @@ export default function UserInfo() {
           transition={{ duration: 0.5, delay: 0.3 }}
         >
           <EditableField field="first_name" label="Ad" value={user.first_name} />
-          <EditableField field="email" label="E-posta" value={user.email} disabled={!!user.firebase_uid} />
+          <EditableField field="email" label="E-posta" value={user.email} disabled={!!(user.firebase_uid || user.is_verified)} />
           <EditableField field="birth_date" label="Doğum Tarihi" value={formatDate(user.birth_date)} type="date" />
         </motion.div>
         

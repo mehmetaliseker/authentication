@@ -167,7 +167,6 @@ export default function FriendshipModal({ isOpen, onClose }) {
 }
 
 function UserItem({ user, currentUserId, onAction, confirmingAction, actionUser, onConfirm, onCancel }) {
-  // friendship_status null, undefined veya 'none' ise 'none' olarak kabul et
   const status = user.friendship_status || 'none';
   const isConfirming = confirmingAction && actionUser?.id === user.id;
 
@@ -233,7 +232,6 @@ function UserItem({ user, currentUserId, onAction, confirmingAction, actionUser,
       case 'rejected':
       case 'cancelled':
       default:
-        // İptal edilmiş, reddedilmiş veya bilinmeyen durumlar için + iconu göster
         return (
           <ActionButton
             icon={
