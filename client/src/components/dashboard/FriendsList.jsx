@@ -1,60 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../auth/hooks/useAuth';
-import { useFriendships } from '../../hooks/useFriendships';
+import { useFriendsList } from '../../hooks/useFriendsList';
+import { useMessageModal } from '../../hooks/useMessageModal';
+import { useRemoveFriend } from '../../hooks/useRemoveFriend';
 import MessageModal from '../shared/MessageModal';
 import messageIcon from '../../assets/message_icon.svg';
 
 export default function FriendsList() {
   const { user } = useAuth();
-  const { getFriends, cancelFriendRequest, loading: friendsLoading } = useFriendships();
-  const [friends, setFriends] = useState([]);
-  const [selectedFriend, setSelectedFriend] = useState(null);
-  const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
-  const [removingFriendId, setRemovingFriendId] = useState(null);
-
-  useEffect(() => {
-    if (user?.id) {
-      loadFriends();
-    }
-  }, [user?.id]);
-
-  const loadFriends = async () => {
-    if (!user?.id) return;
-    
-    try {
-      const friendsList = await getFriends(user.id);
-      setFriends(friendsList || []);
-    } catch (err) {
-      console.error('Arkadaşlar yüklenemedi:', err);
-      setFriends([]);
-    }
-  };
-
-  const handleMessageClick = (friend) => {
-    setSelectedFriend(friend);
-    setIsMessageModalOpen(true);
-  };
-
-  const handleRemoveFriend = async (friendId, friendshipId) => {
-    if (!user?.id || !confirm('Bu arkadaşlığı sonlandırmak istediğinize emin misiniz?')) {
-      return;
-    }
-
-    setRemovingFriendId(friendId);
-    try {
-      // Arkadaşlık isteğini iptal et 
-      const success = await cancelFriendRequest(friendshipId, user.id);
-      if (success) {
-        // Arkadaş listesini yeniden yükle
-        await loadFriends();
-      }
-    } catch (err) {
-      console.error('Arkadaşlıktan çıkarma hatası:', err);
-    } finally {
-      setRemovingFriendId(null);
-    }
-  };
+  const { friends, loadFriends, loading: friendsLoading } = useFriendsList(user?.id);
+  const { selectedFriend, isMessageModalOpen, openMessageModal, closeMessageModal, openChatbotModal } = useMessageModal();
+  const { removingFriendId, removeFriend } = useRemoveFriend(user?.id, loadFriends);
 
   return (
     <motion.div
@@ -71,16 +28,13 @@ export default function FriendsList() {
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-3">
-        {/* Chatbot Seçeneği */}
+        
         <motion.div
           className="flex items-center justify-between p-4 rounded-lg border bg-gradient-to-r from-purple-600/50 to-blue-600/50 border-purple-500/50 hover:from-purple-600/70 hover:to-blue-600/70 transition-colors cursor-pointer"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2 }}
-          onClick={() => {
-            setSelectedFriend({ id: 'chatbot', first_name: 'Chatbot', last_name: '', email: 'Yapay Zeka Asistanı', isChatbot: true });
-            setIsMessageModalOpen(true);
-          }}
+          onClick={openChatbotModal}
         >
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
@@ -139,7 +93,7 @@ export default function FriendsList() {
 
               <div className="flex items-center gap-2 flex-shrink-0">
                 <motion.button
-                  onClick={() => handleMessageClick(friend)}
+                  onClick={() => openMessageModal(friend)}
                   className="text-blue-400 hover:text-blue-300 transition-colors p-2 rounded-lg hover:bg-slate-600/50"
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
@@ -148,7 +102,7 @@ export default function FriendsList() {
                   <img src={messageIcon} alt="Mesaj" className="w-5 h-5" />
                 </motion.button>
                 <motion.button
-                  onClick={() => handleRemoveFriend(friend.id, friend.friendship_id)}
+                  onClick={() => removeFriend(friend.id, friend.friendship_id)}
                   disabled={removingFriendId === friend.id}
                   className="text-red-400 hover:text-red-300 transition-colors p-2 rounded-lg hover:bg-slate-600/50 disabled:opacity-50 disabled:cursor-not-allowed"
                   whileHover={{ scale: 1.1 }}
@@ -172,10 +126,7 @@ export default function FriendsList() {
       {/* Message Modal */}
       <MessageModal
         isOpen={isMessageModalOpen}
-        onClose={() => {
-          setIsMessageModalOpen(false);
-          setSelectedFriend(null);
-        }}
+        onClose={closeMessageModal}
         friend={selectedFriend}
       />
     </motion.div>
