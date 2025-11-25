@@ -1,26 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import WhatsAppWidget from './WhatsAppWidget';
-import LiquidEther from './LiquidEther';
 
 export default function WelcomeScreen({ user }) {
   return (
     <div className="h-full w-full relative overflow-hidden bg-[#0f0f1a]">
-      {/* Organic Fluid Waves Background */}
-      <LiquidEther
-        colors={['#5227FF', '#FF9FFC', '#B19EEF']}
-        mouseForce={40}
-        cursorSize={150}
-        autoDemo={true}
-        autoSpeed={3}
-        autoIntensity={4.5}
-        takeoverDuration={0.15}
-        autoResumeDelay={50}
-        autoRampDuration={0.2}
-        resolution={0.7}
-        style={{ width: '100%', height: '100%', position: 'absolute' }}
-      />
-
       {/* İçerik */}
       <motion.div 
         className="h-full flex flex-col justify-center items-center p-8 pt-24 relative z-10"
