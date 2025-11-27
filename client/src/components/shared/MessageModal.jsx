@@ -106,7 +106,7 @@ export default function MessageModal({ isOpen, onClose, friend }) {
           <div className="p-4 border-b border-slate-600/30 bg-slate-700/50 flex-shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <img src={messageIcon} alt="Mesaj" className="w-6 h-6" />
+                <img src={messageIcon} alt="Mesaj" className="w-6 h-6 filter brightness-0 invert" />
                 <div>
                   <h2 className="text-xl font-bold text-white">
                     {isChatbot ? 'Chatbot ile Sohbet' : `${friend.first_name} ${friend.last_name}`}

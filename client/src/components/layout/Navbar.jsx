@@ -43,7 +43,7 @@ export default function Navbar() {
                   whileTap={!isEditingProfile ? { scale: 0.95 } : {}}
                   disabled={isEditingProfile}
                 >
-                  <img src={addFriendIcon} alt="İstekler" className="w-5 h-5" />
+                  <img src={addFriendIcon} alt="İstekler" className="w-5 h-5 filter brightness-0 invert" />
                   İstekler
                 </motion.button>
                 

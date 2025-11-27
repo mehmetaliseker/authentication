@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../auth/hooks/useAuth';
 import { useFriendships } from '../../hooks/useFriendships';
-import { useFloating, useInteractions, useHover, FloatingPortal } from '@floating-ui/react';
 import addFriendIcon from '../../assets/addfriend_icon.svg';
 
 export default function FriendshipModal({ isOpen, onClose }) {
@@ -10,6 +9,7 @@ export default function FriendshipModal({ isOpen, onClose }) {
   const { users, loading, error, message, setMessage, loadUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, cancelFriendRequest } = useFriendships();
   const [confirmingAction, setConfirmingAction] = useState(null);
   const [actionUser, setActionUser] = useState(null);
+  const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'available', 'pending'
 
   useEffect(() => {
     if (isOpen && user?.id) {
@@ -30,6 +30,7 @@ export default function FriendshipModal({ isOpen, onClose }) {
     setConfirmingAction(null);
     setActionUser(null);
     setMessage('');
+    setActiveFilter('all'); // Modal kapanırken filtreyi sıfırla
     onClose();
   };
 
@@ -77,6 +78,29 @@ export default function FriendshipModal({ isOpen, onClose }) {
     setActionUser(null);
   };
 
+  // Filtrelenmiş kullanıcıları hesapla
+  const filteredUsers = useMemo(() => {
+    if (!users || users.length === 0) return [];
+    
+    switch (activeFilter) {
+      case 'available':
+        // İstek atılabilecek kişiler (none, rejected, cancelled)
+        return users.filter(userItem => 
+          !userItem.friendship_status || 
+          userItem.friendship_status === 'none' || 
+          userItem.friendship_status === 'rejected' || 
+          userItem.friendship_status === 'cancelled'
+        );
+      case 'pending':
+        // İstek atılıp onaylanmayı bekleyen kişiler (pending_sent)
+        return users.filter(userItem => userItem.friendship_status === 'pending_sent');
+      case 'all':
+      default:
+        // Tüm kullanıcılar
+        return users;
+    }
+  }, [users, activeFilter]);
+
   if (!isOpen) return null;
 
   return (
@@ -100,10 +124,10 @@ export default function FriendshipModal({ isOpen, onClose }) {
           >
             {/* Header */}
             <div className="p-4 border-b border-slate-600/30 bg-slate-700/50">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <img src={addFriendIcon} alt="Arkadaş Ekle" className="w-6 h-6" />
-                  <h2 className="text-xl font-bold text-white">İstekler</h2>
+                  <img src={addFriendIcon} alt="Arkadaş Ekle" className="w-6 h-6 filter brightness-0 invert" />
+                  <span className="text-white text-lg font-semibold">Arkadaş Ekle</span>
                 </div>
                 <button
                   onClick={handleClose}
@@ -115,6 +139,47 @@ export default function FriendshipModal({ isOpen, onClose }) {
                   </svg>
                 </button>
               </div>
+              
+              {/* Filtre Butonları */}
+              <div className="flex items-center gap-2">
+                <motion.button
+                  onClick={() => setActiveFilter('all')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    activeFilter === 'all'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-600/50 text-slate-300 hover:bg-slate-600'
+                  }`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Kullanıcılar
+                </motion.button>
+                <motion.button
+                  onClick={() => setActiveFilter('available')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    activeFilter === 'available'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-600/50 text-slate-300 hover:bg-slate-600'
+                  }`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Eklenmeyen
+                </motion.button>
+                <motion.button
+                  onClick={() => setActiveFilter('pending')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    activeFilter === 'pending'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-600/50 text-slate-300 hover:bg-slate-600'
+                  }`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Bekleyen
+                </motion.button>
+              </div>
+
               {message && (
                 <div className="mt-3 p-3 bg-blue-500/20 border border-blue-500/30 rounded-lg">
                   <p className="text-blue-200 text-sm">{message}</p>
@@ -128,7 +193,7 @@ export default function FriendshipModal({ isOpen, onClose }) {
             </div>
 
             {/* Content */}
-            <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(75vh - 120px)' }}>
+            <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(75vh - 200px)' }}>
               {!user?.id ? (
                 <div className="text-center py-8">
                   <p className="text-red-400">Giriş yapmanız gerekiyor</p>
@@ -138,13 +203,13 @@ export default function FriendshipModal({ isOpen, onClose }) {
                   <div className="animate-spin rounded-full h-8 w-8 border-2 border-purple-500 border-t-transparent mx-auto"></div>
                   <p className="text-slate-400 mt-2">Yükleniyor...</p>
                 </div>
-              ) : users.length === 0 ? (
+              ) : filteredUsers.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="text-slate-400">Henüz kullanıcı bulunamadı</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {users.map((userItem) => (
+                  {filteredUsers.map((userItem) => (
                     <UserItem
                       key={userItem.id}
                       user={userItem}
@@ -195,6 +260,7 @@ function UserItem({ user, currentUserId, onAction, confirmingAction, actionUser,
             }
             tooltip="İsteği Geri Çek"
             onClick={() => onAction('cancel', user.id, user.friendship_id)}
+            className="text-red-400 hover:text-red-300"
           />
         );
 
@@ -283,43 +349,15 @@ function UserItem({ user, currentUserId, onAction, confirmingAction, actionUser,
 }
 
 function ActionButton({ icon, tooltip, onClick, className = '' }) {
-  const [isHovered, setIsHovered] = useState(false);
-  const { refs, floatingStyles, context } = useFloating({
-    open: isHovered,
-    onOpenChange: setIsHovered,
-  });
-  const { getReferenceProps, getFloatingProps } = useInteractions([
-    useHover(context),
-  ]);
-
   return (
-    <>
-      <motion.button
-        ref={refs.setReference}
-        {...getReferenceProps()}
-        onClick={onClick}
-        className={`${className || 'text-blue-400 hover:text-blue-300'} transition-colors p-2 rounded-lg hover:bg-slate-600/50`}
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-      >
-        {icon}
-      </motion.button>
-      {isHovered && (
-        <FloatingPortal>
-          <motion.div
-            ref={refs.setFloating}
-            style={floatingStyles}
-            {...getFloatingProps()}
-            className="bg-slate-800 text-white px-3 py-2 rounded-lg shadow-lg border border-slate-600 text-sm z-50"
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 5 }}
-          >
-            {tooltip}
-          </motion.div>
-        </FloatingPortal>
-      )}
-    </>
+    <motion.button
+      onClick={onClick}
+      className={`${className || 'text-blue-400 hover:text-blue-300'} transition-colors p-2 rounded-lg hover:bg-slate-600/50`}
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.9 }}
+    >
+      {icon}
+    </motion.button>
   );
 }
 

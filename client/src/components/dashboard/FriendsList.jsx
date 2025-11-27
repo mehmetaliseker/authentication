@@ -54,7 +54,7 @@ export default function FriendsList() {
               whileTap={{ scale: 0.9 }}
               title="Chatbot ile Sohbet Et"
             >
-              <img src={messageIcon} alt="Mesaj" className="w-5 h-5" />
+              <img src={messageIcon} alt="Mesaj" className="w-5 h-5 filter brightness-0 invert" />
             </motion.button>
           </div>
         </motion.div>
@@ -99,7 +99,7 @@ export default function FriendsList() {
                   whileTap={{ scale: 0.9 }}
                   title="Mesaj Gönder"
                 >
-                  <img src={messageIcon} alt="Mesaj" className="w-5 h-5" />
+                  <img src={messageIcon} alt="Mesaj" className="w-5 h-5 filter brightness-0 invert" />
                 </motion.button>
                 <motion.button
                   onClick={() => removeFriend(friend.id, friend.friendship_id)}
