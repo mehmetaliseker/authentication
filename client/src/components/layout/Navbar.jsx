@@ -6,12 +6,14 @@ import ProfilePopup from '../shared/ProfilePopup';
 import TodoModal from '../todo/TodoModal';
 import SearchModal from '../shared/SearchModal';
 import FriendshipModal from '../shared/FriendshipModal';
+import { useUnreadCounts } from '../../hooks/useUnreadCounts';
 import userProfileIcon from '../../assets/basic-user-profile.svg';
 import addFriendIcon from '../../assets/addfriend_icon.svg';
 
 export default function Navbar() {
   const { user, isEditingProfile } = useAuth();
   const { goTo } = useNavigation();
+  const { pendingRequestsCount, refreshCounts } = useUnreadCounts();
   const [isProfilePopupOpen, setIsProfilePopupOpen] = useState(false);
   const [isTodoModalOpen, setIsTodoModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
@@ -37,14 +39,24 @@ export default function Navbar() {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">
                 <motion.button
-                  onClick={() => !isEditingProfile && setIsFriendshipModalOpen(true)}
-                  className={`${isEditingProfile ? 'bg-gray-500 cursor-not-allowed opacity-50' : 'bg-green-600 hover:bg-green-700'} text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2`}
+                  onClick={() => {
+                    if (!isEditingProfile) {
+                      setIsFriendshipModalOpen(true);
+                      refreshCounts();
+                    }
+                  }}
+                  className={`${isEditingProfile ? 'bg-gray-500 cursor-not-allowed opacity-50' : 'bg-green-600 hover:bg-green-700'} text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 relative`}
                   whileHover={!isEditingProfile ? { scale: 1.05 } : {}}
                   whileTap={!isEditingProfile ? { scale: 0.95 } : {}}
                   disabled={isEditingProfile}
                 >
                   <img src={addFriendIcon} alt="İstekler" className="w-5 h-5 filter brightness-0 invert" />
                   İstekler
+                  {pendingRequestsCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                      {pendingRequestsCount > 9 ? '9+' : pendingRequestsCount}
+                    </span>
+                  )}
                 </motion.button>
                 
                 <motion.button
@@ -128,7 +140,11 @@ export default function Navbar() {
       {/* Friendship Modal */}
       <FriendshipModal 
         isOpen={isFriendshipModalOpen} 
-        onClose={() => setIsFriendshipModalOpen(false)} 
+        onClose={() => {
+          setIsFriendshipModalOpen(false);
+          refreshCounts();
+        }}
+        onRequestAccepted={refreshCounts}
       />
     </>
   );

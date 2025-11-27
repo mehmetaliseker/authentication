@@ -134,5 +134,15 @@ export class MessageRepository {
     const result = await this.databaseService.query(query, [userId]);
     return parseInt(result.rows[0].count);
   }
+
+  async getUnreadCountBySender(receiverId: number, senderId: number): Promise<number> {
+    const query = `
+      SELECT COUNT(*) as count 
+      FROM messages 
+      WHERE receiver_id = $1 AND sender_id = $2 AND is_read = false
+    `;
+    const result = await this.databaseService.query(query, [receiverId, senderId]);
+    return parseInt(result.rows[0].count);
+  }
 }
 

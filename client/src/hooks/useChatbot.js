@@ -65,9 +65,30 @@ export function useChatbot() {
 
   // Mesaj gönder
   const sendMessage = useCallback(async (userId, content) => {
-    setLoading(true);
+    if (!content.trim()) return false;
+    
     setError(null);
     
+    // Optimistic update: Kullanıcı mesajını hemen ekle
+    const userMessage = {
+      id: `temp-${Date.now()}`,
+      user_id: userId,
+      message_type: 'user',
+      content: content.trim(),
+      is_read: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    
+    setMessages((prev) => {
+      // Eğer aynı temp ID'ye sahip mesaj varsa ekleme
+      if (prev.some((m) => m.id === userMessage.id)) {
+        return prev;
+      }
+      return [...prev, userMessage];
+    });
+    
+    // Arka planda mesajı gönder
     try {
       const response = await fetch(`${API_BASE_URL}/send`, {
         method: 'POST',
@@ -82,38 +103,42 @@ export function useChatbot() {
 
       if (response.status === 401) {
         handleAuthError(setMessage);
+        // Hata durumunda temp mesajı kaldır
+        setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
         return false;
       }
 
       const data = await response.json();
       if (response.ok) {
-        // Kullanıcı mesajını ekle
-        const userMessage = {
-          id: Date.now(),
-          user_id: userId,
-          message_type: 'user',
-          content: content.trim(),
-          created_at: new Date().toISOString(),
+        // Temp mesajı kaldır ve gerçek mesajları ekle
+        const realUserMessage = {
+          ...userMessage,
+          id: data.data?.id || userMessage.id,
         };
         
         // Chatbot yanıtını ekle
         const assistantMessage = data.data || data;
         
         setMessages((prev) => {
-          const newMessages = [...prev, userMessage, assistantMessage];
-          return newMessages;
+          // Temp mesajı kaldır
+          const withoutTemp = prev.filter((m) => m.id !== userMessage.id);
+          // Gerçek mesajları ekle
+          return [...withoutTemp, realUserMessage, assistantMessage];
         });
         
         setMessage(data.message || 'Mesaj gönderildi');
         return true;
       } else {
         setError(data.message || 'Mesaj gönderilemedi');
+        // Hata durumunda temp mesajı kaldır
+        setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
         return false;
       }
     } catch (err) {
       setError('Beklenmeyen bir hata oluştu.');
       console.error('Mesaj gönderme hatası:', err);
-      setLoading(false);
+      // Hata durumunda temp mesajı kaldır
+      setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
       return false;
     }
   }, []);

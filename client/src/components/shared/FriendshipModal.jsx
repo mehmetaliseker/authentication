@@ -4,7 +4,7 @@ import { useAuth } from '../auth/hooks/useAuth';
 import { useFriendships } from '../../hooks/useFriendships';
 import addFriendIcon from '../../assets/addfriend_icon.svg';
 
-export default function FriendshipModal({ isOpen, onClose }) {
+export default function FriendshipModal({ isOpen, onClose, onRequestAccepted }) {
   const { user } = useAuth();
   const { users, loading, error, message, setMessage, loadUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, cancelFriendRequest } = useFriendships();
   const [confirmingAction, setConfirmingAction] = useState(null);
@@ -64,6 +64,10 @@ export default function FriendshipModal({ isOpen, onClose }) {
       if (success) {
         // Kullanıcı listesini yeniden yükle
         await loadUsers(user.id);
+        // İstek kabul edildiyse sayıyı güncelle
+        if (confirmingAction === 'accept' && onRequestAccepted) {
+          onRequestAccepted();
+        }
       }
     } catch (err) {
       console.error('İşlem hatası:', err);

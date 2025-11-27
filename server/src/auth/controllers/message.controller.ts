@@ -28,6 +28,14 @@ export class MessageController {
     return this.messageService.getUnreadCount(userId);
   }
 
+  @Get('unread-count/:receiverId/:senderId')
+  async getUnreadCountBySender(
+    @Param('receiverId', ParseIntPipe) receiverId: number,
+    @Param('senderId', ParseIntPipe) senderId: number
+  ) {
+    return this.messageService.getUnreadCountBySender(receiverId, senderId);
+  }
+
   @Get('user/:userId')
   async getUserMessages(@Param('userId', ParseIntPipe) userId: number) {
     return this.messageService.getUserMessages(userId);

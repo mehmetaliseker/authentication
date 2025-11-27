@@ -3,6 +3,7 @@ export interface ChatbotMessage {
   user_id: number;
   message_type: 'user' | 'assistant';
   content: string;
+  is_read: boolean;
   created_at: Date;
   updated_at: Date;
 }
@@ -18,6 +19,7 @@ export interface ChatbotMessageWithUser {
   user_id: number;
   message_type: 'user' | 'assistant';
   content: string;
+  is_read: boolean;
   created_at: Date;
   updated_at: Date;
   user_name?: string;

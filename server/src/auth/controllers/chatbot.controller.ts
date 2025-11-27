@@ -33,5 +33,14 @@ export class ChatbotController {
     }
     return this.chatbotService.deleteConversation(userId);
   }
+
+  @Get('unread-count/:userId')
+  async getUnreadCount(@Request() req: any, @Param('userId', ParseIntPipe) userId: number) {
+    // Kullanıcı sadece kendi okunmamış sayısını görebilir
+    if (req.user?.id !== userId) {
+      return { error: 'Yetkisiz erişim' };
+    }
+    return this.chatbotService.getUnreadCount(userId);
+  }
 }
 

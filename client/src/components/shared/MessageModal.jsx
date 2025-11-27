@@ -52,10 +52,9 @@ export default function MessageModal({ isOpen, onClose, friend }) {
     if (!messageText.trim() || !friend || !user?.id) return;
 
     if (isChatbot) {
-      const success = await sendMessage(user.id, messageText);
-      if (success) {
-        setMessageText('');
-      }
+      // Chatbot için optimistic update zaten hook'ta yapılıyor
+      await sendMessage(user.id, messageText);
+      // messageText hook tarafından temizlenecek
     } else {
       const success = await sendMessage(user.id, friend.id, messageText);
       if (success) {

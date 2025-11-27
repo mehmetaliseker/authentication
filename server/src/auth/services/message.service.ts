@@ -35,8 +35,12 @@ export class MessageService {
 
     const messages = await this.messageRepository.findByConversation(userId1, userId2);
     
-    // Okunmamış mesajları işaretle
-    await this.messageRepository.markConversationAsRead(userId2, userId1);
+    // Okunmamış mesajları işaretle - currentUserId'ye gelen mesajları okundu yap
+    if (currentUserId === userId1) {
+      await this.messageRepository.markConversationAsRead(userId2, userId1);
+    } else {
+      await this.messageRepository.markConversationAsRead(userId1, userId2);
+    }
 
     return messages;
   }
@@ -102,6 +106,11 @@ export class MessageService {
 
   async getUnreadCount(userId: number): Promise<{ count: number }> {
     const count = await this.messageRepository.getUnreadCount(userId);
+    return { count };
+  }
+
+  async getUnreadCountBySender(receiverId: number, senderId: number): Promise<{ count: number }> {
+    const count = await this.messageRepository.getUnreadCountBySender(receiverId, senderId);
     return { count };
   }
 }

@@ -128,5 +128,10 @@ export class FriendshipService {
   async getFriends(userId: number): Promise<UserWithFriendshipStatus[]> {
     return await this.friendshipRepository.getFriends(userId);
   }
+
+  async getPendingRequestsCount(userId: number): Promise<{ count: number }> {
+    const requests = await this.friendshipRepository.getFriendshipRequests(userId);
+    return { count: requests.length };
+  }
 }
 

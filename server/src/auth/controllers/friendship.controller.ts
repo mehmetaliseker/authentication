@@ -53,5 +53,10 @@ export class FriendshipController {
   async getFriends(@Param('userId') userId: number) {
     return this.friendshipService.getFriends(userId);
   }
+
+  @Get('pending-requests-count/:userId')
+  async getPendingRequestsCount(@Param('userId') userId: number) {
+    return this.friendshipService.getPendingRequestsCount(userId);
+  }
 }
 

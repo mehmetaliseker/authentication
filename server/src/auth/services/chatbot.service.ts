@@ -85,7 +85,17 @@ export class ChatbotService {
   }
 
   async getConversation(userId: number): Promise<ChatbotMessageWithUser[]> {
-    return await this.chatbotMessageRepository.findByUserId(userId);
+    const messages = await this.chatbotMessageRepository.findByUserId(userId);
+    
+    // Okunmamış mesajları işaretle
+    await this.chatbotMessageRepository.markConversationAsRead(userId);
+    
+    return messages;
+  }
+
+  async getUnreadCount(userId: number): Promise<{ count: number }> {
+    const count = await this.chatbotMessageRepository.getUnreadCount(userId);
+    return { count };
   }
 
   async deleteConversation(userId: number): Promise<{ message: string }> {
