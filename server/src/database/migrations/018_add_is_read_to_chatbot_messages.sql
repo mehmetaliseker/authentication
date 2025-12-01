@@ -17,3 +17,4 @@ CREATE INDEX IF NOT EXISTS idx_chatbot_messages_user_is_read ON chatbot_messages
 -- Kolon yorumu ekle
 COMMENT ON COLUMN chatbot_messages.is_read IS 'Mesaj okundu mu? (sadece assistant mesajları için kullanılır)';
 
+

@@ -100,8 +100,21 @@ export default function FriendshipModal({ isOpen, onClose, onRequestAccepted }) 
         return users.filter(userItem => userItem.friendship_status === 'pending_sent');
       case 'all':
       default:
-        // Tüm kullanıcılar
-        return users;
+        // Tüm kullanıcılar - gelen istekler (pending_received) en üste
+        const sortedUsers = [...users].sort((a, b) => {
+          // pending_received olanları en üste al
+          if (a.friendship_status === 'pending_received' && b.friendship_status !== 'pending_received') {
+            return -1;
+          }
+          if (a.friendship_status !== 'pending_received' && b.friendship_status === 'pending_received') {
+            return 1;
+          }
+          // Diğer durumlar için alfabetik sıralama (first_name, last_name)
+          const nameA = `${a.first_name} ${a.last_name}`.toLowerCase();
+          const nameB = `${b.first_name} ${b.last_name}`.toLowerCase();
+          return nameA.localeCompare(nameB, 'tr');
+        });
+        return sortedUsers;
     }
   }, [users, activeFilter]);
 
