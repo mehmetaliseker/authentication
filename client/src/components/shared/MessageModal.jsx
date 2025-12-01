@@ -51,12 +51,15 @@ export default function MessageModal({ isOpen, onClose, friend }) {
   const handleSendMessage = async () => {
     if (!messageText.trim() || !friend || !user?.id) return;
 
+    const messageContent = messageText.trim();
+    
     if (isChatbot) {
       // Chatbot için optimistic update zaten hook'ta yapılıyor
-      await sendMessage(user.id, messageText);
-      // messageText hook tarafından temizlenecek
+      // Input'u hemen temizle (optimistic update için)
+      setMessageText('');
+      await sendMessage(user.id, messageContent);
     } else {
-      const success = await sendMessage(user.id, friend.id, messageText);
+      const success = await sendMessage(user.id, friend.id, messageContent);
       if (success) {
         setMessageText('');
         // Socket.io ile mesaj otomatik olarak eklenecek, tekrar yüklemeye gerek yok
