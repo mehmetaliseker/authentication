@@ -9,6 +9,38 @@ import messageIcon from '../../assets/message_icon.svg';
 const API_BASE_URL = 'http://localhost:3001';
 const TOKEN = () => localStorage.getItem('accessToken');
 
+// Son aktiflik zamanını formatla
+function formatLastActive(lastActive) {
+  if (!lastActive) return 'Bilinmiyor';
+  
+  const now = new Date();
+  const activeDate = new Date(lastActive);
+  const diffMs = now - activeDate;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) {
+    return 'Şimdi';
+  } else if (diffMins < 60) {
+    return `${diffMins} dakika önce`;
+  } else if (diffHours < 24) {
+    return `${diffHours} saat önce`;
+  } else if (diffDays === 1) {
+    return 'Dün ' + activeDate.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+  } else if (diffDays < 7) {
+    return `${diffDays} gün önce`;
+  } else {
+    return activeDate.toLocaleDateString('tr-TR', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+}
+
 export default function MessageModal({ isOpen, onClose, friend }) {
   const { user } = useAuth();
   const { socket, isConnected } = useSocket();
@@ -197,6 +229,11 @@ export default function MessageModal({ isOpen, onClose, friend }) {
                     {isChatbot ? 'Chatbot ile Sohbet' : `${friend.first_name} ${friend.last_name}`}
                   </h2>
                   <p className="text-sm text-slate-400">{isChatbot ? 'Yapay Zeka Asistanı' : friend.email}</p>
+                  {!isChatbot && friend.last_active && (
+                    <p className="text-xs text-slate-500 mt-1">
+                      Son aktiflik: {formatLastActive(friend.last_active)}
+                    </p>
+                  )}
                 </div>
               </div>
               <button
@@ -331,8 +368,8 @@ export default function MessageModal({ isOpen, onClose, friend }) {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                   >
-                    <div className="flex items-start gap-2 max-w-[75%]">
-                      <div className="rounded-lg px-4 py-3 bg-slate-700 text-slate-200">
+                    <div className="flex items-start gap-2 max-w-[60%]">
+                      <div className="rounded-lg px-4 py-4 bg-slate-700 text-slate-200">
                         <div className="flex items-center gap-1.5">
                           <div className="typing-dot w-2 h-2 bg-slate-300 rounded-full"></div>
                           <div className="typing-dot w-2 h-2 bg-slate-300 rounded-full"></div>
@@ -347,7 +384,6 @@ export default function MessageModal({ isOpen, onClose, friend }) {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input */}
           <div className="p-4 border-t border-slate-600/30 bg-slate-700/50 flex-shrink-0">
             <div className="flex gap-2">
               <textarea

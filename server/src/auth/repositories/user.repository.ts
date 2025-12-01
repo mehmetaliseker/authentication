@@ -10,7 +10,7 @@ export class UserRepository implements IUserRepository {
     const query = `
       SELECT id, first_name, last_name, email, password_hash, birth_date, country, is_verified, 
              verification_token, failed_attempts, account_locked, 
-             last_login, locked_until, firebase_uid, created_at, updated_at
+             last_login, last_active, locked_until, firebase_uid, created_at, updated_at
       FROM users 
       WHERE email = $1
     `;
@@ -23,7 +23,7 @@ export class UserRepository implements IUserRepository {
     const query = `
       SELECT id, first_name, last_name, email, password_hash, birth_date, country, is_verified, 
              verification_token, failed_attempts, account_locked, 
-             last_login, locked_until, firebase_uid, created_at, updated_at
+             last_login, last_active, locked_until, firebase_uid, created_at, updated_at
       FROM users 
       WHERE id = $1
     `;
@@ -38,7 +38,7 @@ export class UserRepository implements IUserRepository {
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING id, first_name, last_name, email, password_hash, birth_date, country, is_verified, 
                 verification_token, failed_attempts, account_locked, 
-                last_login, locked_until, firebase_uid, created_at, updated_at
+                last_login, last_active, locked_until, firebase_uid, created_at, updated_at
     `;
 
     const values = [
@@ -84,7 +84,7 @@ export class UserRepository implements IUserRepository {
       WHERE id = $${paramIndex}
       RETURNING id, first_name, last_name, email, password_hash, birth_date, country, is_verified, 
                 verification_token, failed_attempts, account_locked, 
-                last_login, locked_until, firebase_uid, created_at, updated_at
+                last_login, last_active, locked_until, firebase_uid, created_at, updated_at
     `;
 
     const result = await this.databaseService.query(query, values);
@@ -102,6 +102,15 @@ export class UserRepository implements IUserRepository {
     const query = `
       UPDATE users 
       SET last_login = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+    `;
+    await this.databaseService.query(query, [id]);
+  }
+
+  async updateLastActive(id: number): Promise<void> {
+    const query = `
+      UPDATE users 
+      SET last_active = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
       WHERE id = $1
     `;
     await this.databaseService.query(query, [id]);

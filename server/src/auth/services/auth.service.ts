@@ -130,6 +130,7 @@ export class AuthService {
       // Başarılı login - hesabı aç ve deneme sayısını sıfırla
       await this.userRepository.updateFailedAttempts(user.id, 0, false, undefined);
       await this.userRepository.updateLastLogin(user.id);
+      await this.userRepository.updateLastActive(user.id);
 
       // Login log kaydet
       try {

@@ -21,6 +21,7 @@ export interface UserWithFriendshipStatus {
   first_name: string;
   last_name: string;
   email: string;
+  last_active?: Date;
   friendship_status?: 'none' | 'pending_sent' | 'pending_received' | 'accepted' | 'rejected' | 'cancelled';
   friendship_id?: number;
   requester_id?: number;

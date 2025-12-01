@@ -61,6 +61,7 @@ export class FriendshipRepository {
         u.first_name,
         u.last_name,
         u.email,
+        u.last_active,
         f.id as friendship_id,
         f.requester_id,
         f.status,
@@ -87,6 +88,7 @@ export class FriendshipRepository {
       first_name: row.first_name,
       last_name: row.last_name,
       email: row.email,
+      last_active: row.last_active || undefined,
       friendship_status: row.friendship_status,
       friendship_id: row.friendship_id || undefined,
       requester_id: row.requester_id || undefined,
@@ -120,6 +122,7 @@ export class FriendshipRepository {
         u.first_name,
         u.last_name,
         u.email,
+        u.last_active,
         f.id as friendship_id
       FROM friendships f
       JOIN users u ON (
@@ -138,6 +141,7 @@ export class FriendshipRepository {
       first_name: row.first_name,
       last_name: row.last_name,
       email: row.email,
+      last_active: row.last_active || undefined,
       friendship_status: 'accepted' as const,
       friendship_id: row.friendship_id,
     }));

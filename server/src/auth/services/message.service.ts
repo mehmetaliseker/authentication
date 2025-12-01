@@ -1,10 +1,14 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { MessageRepository } from '../repositories/message.repository';
+import { UserRepository } from '../repositories/user.repository';
 import { CreateMessageDto, UpdateMessageDto, MessageWithUser, Message } from '../interfaces/message.interface';
 
 @Injectable()
 export class MessageService {
-  constructor(private readonly messageRepository: MessageRepository) {}
+  constructor(
+    private readonly messageRepository: MessageRepository,
+    private readonly userRepository: UserRepository,
+  ) {}
 
   async sendMessage(createDto: CreateMessageDto): Promise<{ message: string; data: Message }> {
     if (createDto.sender_id === createDto.receiver_id) {
@@ -20,6 +24,9 @@ export class MessageService {
       receiver_id: createDto.receiver_id,
       content: createDto.content.trim(),
     });
+
+    // Gönderen kullanıcının last_active'ini güncelle
+    await this.userRepository.updateLastActive(createDto.sender_id);
 
     return {
       message: 'Mesaj gönderildi',
@@ -41,6 +48,9 @@ export class MessageService {
     } else {
       await this.messageRepository.markConversationAsRead(userId1, userId2);
     }
+
+    // Konuşmayı açan kullanıcının last_active'ini güncelle
+    await this.userRepository.updateLastActive(currentUserId);
 
     return messages;
   }

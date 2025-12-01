@@ -1,13 +1,17 @@
 import { Injectable, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { GoogleGenAI } from '@google/genai';
 import { ChatbotMessageRepository } from '../repositories/chatbot-message.repository';
+import { UserRepository } from '../repositories/user.repository';
 import { CreateChatbotMessageDto, ChatbotMessageWithUser, ChatbotMessage } from '../interfaces/chatbot-message.interface';
 
 @Injectable()
 export class ChatbotService {
   private genAI: GoogleGenAI;
 
-  constructor(private readonly chatbotMessageRepository: ChatbotMessageRepository) {
+  constructor(
+    private readonly chatbotMessageRepository: ChatbotMessageRepository,
+    private readonly userRepository: UserRepository,
+  ) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new Error('GEMINI_API_KEY yok');
@@ -74,6 +78,9 @@ export class ChatbotService {
         content: assistantContent,
       });
 
+      // Kullanıcının last_active'ini güncelle
+      await this.userRepository.updateLastActive(userId);
+
       return {
         message: 'Mesaj gönderildi',
         data: assistantMessage,
@@ -89,6 +96,9 @@ export class ChatbotService {
     
     // Okunmamış mesajları işaretle
     await this.chatbotMessageRepository.markConversationAsRead(userId);
+    
+    // Kullanıcının last_active'ini güncelle
+    await this.userRepository.updateLastActive(userId);
     
     return messages;
   }

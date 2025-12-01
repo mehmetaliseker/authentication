@@ -11,6 +11,7 @@ export interface IUser {
   failed_attempts: number;
   account_locked: boolean;
   last_login?: Date;
+  last_active?: Date;
   locked_until?: Date;
   firebase_uid?: string;
   created_at: Date;
@@ -36,6 +37,7 @@ export interface IUserRepository {
   update(id: number, userData: Partial<IUser>): Promise<IUser>;
   delete(id: number): Promise<boolean>;
   updateLastLogin(id: number): Promise<void>;
+  updateLastActive(id: number): Promise<void>;
   updateFailedAttempts(id: number, attempts: number, locked?: boolean, lockedUntil?: Date): Promise<void>;
   getPasswordHistory(userId: number): Promise<string[]>;
   addPasswordToHistory(userId: number, passwordHash: string): Promise<void>;
