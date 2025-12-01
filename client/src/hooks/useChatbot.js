@@ -15,6 +15,7 @@ export function useChatbot() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState('');
+  const [isSending, setIsSending] = useState(false);
 
   // Konuşma mesajlarını yükle
   const loadConversation = useCallback(async (userId) => {
@@ -68,6 +69,7 @@ export function useChatbot() {
     if (!content.trim()) return false;
     
     setError(null);
+    setIsSending(true);
     
     // Optimistic update: Kullanıcı mesajını hemen ekle
     const userMessage = {
@@ -105,6 +107,7 @@ export function useChatbot() {
         handleAuthError(setMessage);
         // Hata durumunda temp mesajı kaldır
         setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
+        setIsSending(false);
         return false;
       }
 
@@ -126,12 +129,14 @@ export function useChatbot() {
           return [...withoutTemp, realUserMessage, assistantMessage];
         });
         
-        setMessage(data.message || 'Mesaj gönderildi');
+        // Chatbot için başarı mesajı gösterme
+        setIsSending(false);
         return true;
       } else {
         setError(data.message || 'Mesaj gönderilemedi');
         // Hata durumunda temp mesajı kaldır
         setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
+        setIsSending(false);
         return false;
       }
     } catch (err) {
@@ -139,16 +144,19 @@ export function useChatbot() {
       console.error('Mesaj gönderme hatası:', err);
       // Hata durumunda temp mesajı kaldır
       setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
+      setIsSending(false);
       return false;
     }
   }, []);
 
   return {
     messages,
+    setMessages,
     loading,
     error,
     message,
     setMessage,
+    isSending,
     loadConversation,
     sendMessage,
   };

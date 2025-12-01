@@ -104,5 +104,12 @@ export class ChatbotService {
       message: 'Konuşma geçmişi silindi',
     };
   }
+
+  async markMessageAsRead(messageId: number, userId: number): Promise<{ message: string }> {
+    await this.chatbotMessageRepository.markMessageAsRead(messageId, userId);
+    return {
+      message: 'Mesaj okundu olarak işaretlendi',
+    };
+  }
 }
 

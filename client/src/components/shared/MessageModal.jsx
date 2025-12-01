@@ -3,18 +3,24 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../auth/hooks/useAuth';
 import { useMessages } from '../../hooks/useMessages';
 import { useChatbot } from '../../hooks/useChatbot';
+import { useSocket } from '../../contexts/SocketContext';
 import messageIcon from '../../assets/message_icon.svg';
+
+const API_BASE_URL = 'http://localhost:3001';
+const TOKEN = () => localStorage.getItem('accessToken');
 
 export default function MessageModal({ isOpen, onClose, friend }) {
   const { user } = useAuth();
+  const { socket, isConnected } = useSocket();
   const isChatbot = friend?.isChatbot || friend?.id === 'chatbot';
   const regularMessages = useMessages();
   const chatbotMessages = useChatbot();
   
-  const { messages, loading, error, message, setMessage, loadConversation, sendMessage } = isChatbot ? chatbotMessages : regularMessages;
+  const { messages, setMessages: setChatbotMessages, loading, error, message, setMessage, isSending, loadConversation, sendMessage } = isChatbot ? chatbotMessages : regularMessages;
   const [messageText, setMessageText] = useState('');
   const messagesEndRef = useRef(null);
   const [deletingMessageId, setDeletingMessageId] = useState(null);
+  const processedMessageIdsRef = useRef(new Set());
 
   useEffect(() => {
     if (isOpen && friend && user?.id) {
@@ -41,6 +47,83 @@ export default function MessageModal({ isOpen, onClose, friend }) {
     }
   }, [message, setMessage]);
 
+  // Modal açıkken gelen mesajları otomatik olarak okundu olarak işaretle
+  useEffect(() => {
+    if (!isOpen || !user?.id) return;
+
+    if (isChatbot) {
+      // Chatbot için: Modal açıkken yeni assistant mesajı geldiğinde otomatik okundu olarak işaretle
+      const newAssistantMessages = messages.filter(
+        (msg) => 
+          msg.message_type === 'assistant' && 
+          !msg.is_read && 
+          typeof msg.id === 'number' &&
+          !processedMessageIdsRef.current.has(msg.id)
+      );
+      
+      // Yeni assistant mesajlarını okundu olarak işaretle
+      newAssistantMessages.forEach(async (msg) => {
+        // İşlenmiş mesajlar listesine ekle
+        processedMessageIdsRef.current.add(msg.id);
+        
+        try {
+          await fetch(`${API_BASE_URL}/chatbot/${msg.id}/read`, {
+            method: 'PUT',
+            headers: {
+              'Authorization': `Bearer ${TOKEN()}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ user_id: user.id }),
+          });
+          // Mesajı state'te de güncelle
+          if (setChatbotMessages) {
+            setChatbotMessages((prev) =>
+              prev.map((m) => (m.id === msg.id ? { ...m, is_read: true } : m))
+            );
+          }
+        } catch (err) {
+          console.error('Chatbot mesaj okundu işaretleme hatası:', err);
+          // Hata durumunda işlenmiş listesinden çıkar
+          processedMessageIdsRef.current.delete(msg.id);
+        }
+      });
+    } else {
+      // Normal mesajlar için: Socket'ten yeni mesaj geldiğinde otomatik okundu olarak işaretle
+      if (!isConnected || !socket) return;
+
+      const handleNewMessage = async (data) => {
+        if (data.message && data.message.receiver_id === user.id && data.message.sender_id === friend.id) {
+          // Bu konuşmaya ait bir mesaj geldi ve modal açık, otomatik okundu olarak işaretle
+          try {
+            await fetch(`${API_BASE_URL}/messages/${data.message.id}/read`, {
+              method: 'PUT',
+              headers: {
+                'Authorization': `Bearer ${TOKEN()}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ user_id: user.id }),
+            });
+          } catch (err) {
+            console.error('Mesaj okundu işaretleme hatası:', err);
+          }
+        }
+      };
+
+      socket.on('message:new', handleNewMessage);
+
+      return () => {
+        socket.off('message:new', handleNewMessage);
+      };
+    }
+  }, [isOpen, isConnected, socket, user?.id, friend?.id, isChatbot, messages, setChatbotMessages]);
+
+  // Modal kapandığında işlenmiş mesaj ID'lerini temizle
+  useEffect(() => {
+    if (!isOpen) {
+      processedMessageIdsRef.current.clear();
+    }
+  }, [isOpen]);
+
   const handleClose = () => {
     setMessageText('');
     setMessage('');
@@ -62,7 +145,7 @@ export default function MessageModal({ isOpen, onClose, friend }) {
       const success = await sendMessage(user.id, friend.id, messageContent);
       if (success) {
         setMessageText('');
-        // Socket.io ile mesaj otomatik olarak eklenecek, tekrar yüklemeye gerek yok
+        // Socket.io ile mesaj otomatik olarak eklenecek, tekrar yüklemeye gerek yo
       }
     }
   };
@@ -126,7 +209,7 @@ export default function MessageModal({ isOpen, onClose, friend }) {
                 </svg>
               </button>
             </div>
-            {message && (
+            {message && !isChatbot && (
               <div className="mt-3 p-3 bg-blue-500/20 border border-blue-500/30 rounded-lg">
                 <p className="text-blue-200 text-sm">{message}</p>
               </div>
@@ -150,33 +233,34 @@ export default function MessageModal({ isOpen, onClose, friend }) {
                 <p className="text-slate-400">Henüz mesaj yok. İlk mesajı siz gönderin!</p>
               </div>
             ) : (
-              messages.map((msg) => {
-                if (isChatbot) {
-                  const isUserMessage = msg.message_type === 'user';
-                  return (
-                    <motion.div
-                      key={msg.id}
-                      className={`flex ${isUserMessage ? 'justify-end' : 'justify-start'}`}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                    >
-                      <div className={`flex items-start gap-2 max-w-[75%] ${isUserMessage ? 'flex-row-reverse' : 'flex-row'}`}>
-                        <div
-                          className={`rounded-lg px-4 py-2 ${
-                            isUserMessage
-                              ? 'bg-purple-600 text-white'
-                              : 'bg-slate-700 text-slate-200'
-                          }`}
-                        >
-                          <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
-                          <p className={`text-xs mt-1 ${isUserMessage ? 'text-purple-200' : 'text-slate-400'}`}>
-                            {new Date(msg.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-                          </p>
+              <>
+                {messages.map((msg) => {
+                  if (isChatbot) {
+                    const isUserMessage = msg.message_type === 'user';
+                    return (
+                      <motion.div
+                        key={msg.id}
+                        className={`flex ${isUserMessage ? 'justify-end' : 'justify-start'}`}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                      >
+                        <div className={`flex items-start gap-2 max-w-[75%] ${isUserMessage ? 'flex-row-reverse' : 'flex-row'}`}>
+                          <div
+                            className={`rounded-lg px-4 py-2 ${
+                              isUserMessage
+                                ? 'bg-purple-600 text-white'
+                                : 'bg-slate-700 text-slate-200'
+                            }`}
+                          >
+                            <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                            <p className={`text-xs mt-1 ${isUserMessage ? 'text-purple-200' : 'text-slate-400'}`}>
+                              {new Date(msg.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  );
-                } else {
+                      </motion.div>
+                    );
+                  } else {
                   const isOwnMessage = msg.sender_id === user?.id;
                   return (
                     <motion.div
@@ -238,8 +322,27 @@ export default function MessageModal({ isOpen, onClose, friend }) {
                       </div>
                     </motion.div>
                   );
-                }
-              })
+                  }
+                })}
+                {/* Chatbot için yüklenme göstergesi (WhatsApp tarzı üç nokta) */}
+                {isChatbot && isSending && (
+                  <motion.div
+                    className="flex justify-start"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    <div className="flex items-start gap-2 max-w-[75%]">
+                      <div className="rounded-lg px-4 py-3 bg-slate-700 text-slate-200">
+                        <div className="flex items-center gap-1.5">
+                          <div className="typing-dot w-2 h-2 bg-slate-300 rounded-full"></div>
+                          <div className="typing-dot w-2 h-2 bg-slate-300 rounded-full"></div>
+                          <div className="typing-dot w-2 h-2 bg-slate-300 rounded-full"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </>
             )}
             <div ref={messagesEndRef} />
           </div>

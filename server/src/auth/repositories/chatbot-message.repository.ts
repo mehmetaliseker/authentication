@@ -116,5 +116,23 @@ export class ChatbotMessageRepository {
       throw error;
     }
   }
+
+  async markMessageAsRead(messageId: number, userId: number): Promise<void> {
+    try {
+      const query = `
+        UPDATE chatbot_messages 
+        SET is_read = true, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1 AND user_id = $2 AND message_type = 'assistant' AND is_read = false
+      `;
+      await this.databaseService.query(query, [messageId, userId]);
+    } catch (error) {
+      // Eğer is_read kolonu yoksa (migration çalıştırılmamışsa), sessizce geç
+      if (error.message && error.message.includes('is_read')) {
+        console.warn('is_read kolonu bulunamadı. Migration çalıştırılmalı: 018_add_is_read_to_chatbot_messages.sql');
+        return;
+      }
+      throw error;
+    }
+  }
 }
 
