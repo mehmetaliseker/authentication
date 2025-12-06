@@ -19,7 +19,7 @@ export class ChatbotService {
     this.genAI = new GoogleGenAI({ apiKey });
   }
 
-  async sendMessage(userId: number, content: string): Promise<{ message: string; data: ChatbotMessage }> {
+  async sendMessage(userId: number, content: string): Promise<{ message: string; data: { userMessage: ChatbotMessage; assistantMessage: ChatbotMessage } }> {
     if (!content || content.trim().length === 0) {
       throw new BadRequestException('Mesaj içeriği boş olamaz');
     }
@@ -78,13 +78,31 @@ export class ChatbotService {
         content: assistantContent,
       });
 
+      console.log('✅ Assistant mesajı oluşturuldu:', {
+        id: assistantMessage.id,
+        content: assistantContent.substring(0, 50),
+        message_type: assistantMessage.message_type
+      });
+
       // Kullanıcının last_active'ini güncelle
       await this.userRepository.updateLastActive(userId);
 
-      return {
+      const response = {
         message: 'Mesaj gönderildi',
-        data: assistantMessage,
+        data: {
+          userMessage: userMessage,
+          assistantMessage: assistantMessage,
+        },
       };
+
+      console.log('📤 Backend Response:', {
+        hasUserMessage: !!response.data.userMessage,
+        hasAssistantMessage: !!response.data.assistantMessage,
+        userMessageId: response.data.userMessage?.id,
+        assistantMessageId: response.data.assistantMessage?.id
+      });
+
+      return response;
     } catch (error) {
       console.error('Chatbot hatası:', error);
       throw new InternalServerErrorException('Chatbot yanıt veremedi. Lütfen tekrar deneyin.');

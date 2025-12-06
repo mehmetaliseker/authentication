@@ -51,12 +51,28 @@ export function useChatbot() {
       
       const data = await response.json();
       const messagesArray = Array.isArray(data) ? data : (data.data || []);
-      setMessages(messagesArray);
-      return messagesArray;
+      
+      // Duplicate kontrolü: Aynı ID'ye sahip mesajları filtrele ve sırala
+      const uniqueMessages = messagesArray.reduce((acc, msg) => {
+        // Aynı ID'ye sahip mesaj varsa ekleme
+        if (!acc.some((m) => m.id === msg.id)) {
+          acc.push(msg);
+        }
+        return acc;
+      }, []);
+      
+      // Tarihe göre sırala
+      uniqueMessages.sort((a, b) => {
+        const dateA = new Date(a.created_at);
+        const dateB = new Date(b.created_at);
+        return dateA - dateB;
+      });
+      
+      setMessages(uniqueMessages);
+      return uniqueMessages;
     } catch (err) {
       const errorMessage = err.message || 'Beklenmeyen bir hata oluştu';
       setError(errorMessage);
-      console.error('Konuşma yükleme hatası:', err);
       setMessages([]);
       return [];
     } finally {
@@ -112,21 +128,74 @@ export function useChatbot() {
       }
 
       const data = await response.json();
+      
       if (response.ok) {
-        // Temp mesajı kaldır ve gerçek mesajları ekle
-        const realUserMessage = {
-          ...userMessage,
-          id: data.data?.id || userMessage.id,
-        };
+        // Backend'den gelen gerçek mesajları al - tüm olası yapıları kontrol et
+        let realUserMessage = null;
+        let assistantMessage = null;
         
-        // Chatbot yanıtını ekle
-        const assistantMessage = data.data || data;
+        // Yapı 1: { message: string, data: { userMessage, assistantMessage } }
+        if (data.data && typeof data.data === 'object') {
+          realUserMessage = data.data.userMessage || data.data.user_message;
+          assistantMessage = data.data.assistantMessage || data.data.assistant_message;
+        }
+        
+        // Yapı 2: Direkt { userMessage, assistantMessage }
+        if (!realUserMessage && !assistantMessage) {
+          realUserMessage = data.userMessage || data.user_message;
+          assistantMessage = data.assistantMessage || data.assistant_message;
+        }
+        
+        // Yapı 3: Array olarak geliyorsa
+        if (Array.isArray(data)) {
+          realUserMessage = data.find(m => m.message_type === 'user');
+          assistantMessage = data.find(m => m.message_type === 'assistant');
+        }
         
         setMessages((prev) => {
+          // Temp mesajı bul (gönderilen mesajla eşleşen)
+          const tempMessage = prev.find((m) => 
+            String(m.id).startsWith('temp-') && 
+            m.content === content.trim() && 
+            m.message_type === 'user'
+          );
+          
           // Temp mesajı kaldır
-          const withoutTemp = prev.filter((m) => m.id !== userMessage.id);
-          // Gerçek mesajları ekle
-          return [...withoutTemp, realUserMessage, assistantMessage];
+          let updatedMessages = prev.filter((m) => m !== tempMessage);
+          
+          // Gerçek user mesajını ekle (duplicate kontrolü ile)
+          if (realUserMessage && realUserMessage.id) {
+            const userExists = updatedMessages.some((m) => m.id === realUserMessage.id);
+            if (!userExists) {
+              updatedMessages = [...updatedMessages, realUserMessage];
+            }
+          } else if (tempMessage) {
+            // Eğer backend'den user mesajı gelmediyse, temp mesajı olduğu gibi bırak
+            updatedMessages = [...updatedMessages, tempMessage];
+          }
+          
+          // Assistant mesajını ekle (duplicate kontrolü ile)
+          if (assistantMessage) {
+            // ID kontrolü yap, yoksa oluştur
+            const assistantId = assistantMessage.id || `assistant-${Date.now()}`;
+            const assistantWithId = { 
+              ...assistantMessage, 
+              id: assistantId,
+              message_type: assistantMessage.message_type || 'assistant'
+            };
+            
+            const assistantExists = updatedMessages.some((m) => m.id === assistantId);
+            if (!assistantExists) {
+              updatedMessages = [...updatedMessages, assistantWithId];
+            }
+          }
+          
+          // Tarihe göre sırala
+          return updatedMessages.sort((a, b) => {
+            const dateA = new Date(a.created_at);
+            const dateB = new Date(b.created_at);
+            return dateA - dateB;
+          });
         });
         
         // Chatbot için başarı mesajı gösterme
@@ -141,7 +210,6 @@ export function useChatbot() {
       }
     } catch (err) {
       setError('Beklenmeyen bir hata oluştu.');
-      console.error('Mesaj gönderme hatası:', err);
       // Hata durumunda temp mesajı kaldır
       setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
       setIsSending(false);
