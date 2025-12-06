@@ -48,7 +48,7 @@ export default function MessageModal({ isOpen, onClose, friend }) {
   const regularMessages = useMessages();
   const chatbotMessages = useChatbot();
   
-  const { messages, setMessages: setChatbotMessages, loading, error, message, setMessage, isSending, loadConversation, sendMessage } = isChatbot ? chatbotMessages : regularMessages;
+  const { messages, setMessages: setChatbotMessages, loading, error, message, setMessage, isSending, loadConversation, sendMessage, markAsRead, markConversationAsRead } = isChatbot ? chatbotMessages : regularMessages;
   const [messageText, setMessageText] = useState('');
   const messagesEndRef = useRef(null);
   const [deletingMessageId, setDeletingMessageId] = useState(null);
@@ -120,34 +120,32 @@ export default function MessageModal({ isOpen, onClose, friend }) {
         }
       });
     } else {
-      // Normal mesajlar için: Socket'ten yeni mesaj geldiğinde otomatik okundu olarak işaretle
-      if (!isConnected || !socket) return;
+      // Normal mesajlar için: Modal açıkken gelen mesajları otomatik okundu olarak işaretle
+      if (!isConnected || !socket || !markAsRead) return;
 
       const handleNewMessage = async (data) => {
         if (data.message && data.message.receiver_id === user.id && data.message.sender_id === friend.id) {
           // Bu konuşmaya ait bir mesaj geldi ve modal açık, otomatik okundu olarak işaretle
-          try {
-            await fetch(`${API_BASE_URL}/messages/${data.message.id}/read`, {
-              method: 'PUT',
-              headers: {
-                'Authorization': `Bearer ${TOKEN()}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ user_id: user.id }),
-            });
-          } catch (err) {
-            console.error('Mesaj okundu işaretleme hatası:', err);
-          }
+          await markAsRead(data.message.id, user.id);
         }
       };
 
       socket.on('message:new', handleNewMessage);
 
+      // Mevcut okunmamış mesajları da işaretle
+      const unreadMessages = messages.filter(
+        (msg) => msg.receiver_id === user.id && msg.sender_id === friend.id && !msg.is_read
+      );
+      
+      unreadMessages.forEach((msg) => {
+        markAsRead(msg.id, user.id);
+      });
+
       return () => {
         socket.off('message:new', handleNewMessage);
       };
     }
-  }, [isOpen, isConnected, socket, user?.id, friend?.id, isChatbot, messages, setChatbotMessages]);
+  }, [isOpen, isConnected, socket, user?.id, friend?.id, isChatbot, messages, setChatbotMessages, markAsRead]);
 
   // Modal kapandığında işlenmiş mesaj ID'lerini temizle
   useEffect(() => {
@@ -315,9 +313,25 @@ export default function MessageModal({ isOpen, onClose, friend }) {
                           }`}
                         >
                           <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
-                          <p className={`text-xs mt-1 ${isOwnMessage ? 'text-purple-200' : 'text-slate-400'}`}>
-                            {new Date(msg.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-                          </p>
+                          <div className={`flex items-center justify-end gap-1 mt-1 ${isOwnMessage ? 'text-purple-200' : 'text-slate-400'}`}>
+                            <p className={`text-xs ${isOwnMessage ? 'text-purple-200' : 'text-slate-400'}`}>
+                              {new Date(msg.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                            {isOwnMessage && (
+                              <span className="flex items-center ml-1" title={msg.is_read && msg.read_at ? `Görüldü: ${new Date(msg.read_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}` : 'Gönderildi'}>
+                                {msg.is_read && msg.read_at ? (
+                                  <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 16 16" style={{ marginLeft: '2px' }}>
+                                    <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+                                    <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z" transform="translate(0 3)"/>
+                                  </svg>
+                                ) : (
+                                  <svg className="w-4 h-4 text-slate-400" fill="currentColor" viewBox="0 0 16 16" style={{ marginLeft: '2px' }}>
+                                    <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+                                  </svg>
+                                )}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         {isOwnMessage && (
                           <div className="flex items-center">

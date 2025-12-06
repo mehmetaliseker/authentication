@@ -40,12 +40,39 @@ export function useMessages() {
       }
     };
 
+    const handleReadReceipt = (data) => {
+      if (data.message_id) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === data.message_id
+              ? { ...m, is_read: true, read_at: data.read_at }
+              : m
+          )
+        );
+      }
+    };
+
+    const handleConversationRead = (data) => {
+      // Tüm mesajları okundu olarak işaretle
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.sender_id === data.receiver_id && !m.is_read
+            ? { ...m, is_read: true, read_at: new Date().toISOString() }
+            : m
+        )
+      );
+    };
+
     socket.on('message:new', handleNewMessage);
     socket.on('message:deleted', handleMessageDeleted);
+    socket.on('message:read-receipt', handleReadReceipt);
+    socket.on('message:conversation-read', handleConversationRead);
 
     return () => {
       socket.off('message:new', handleNewMessage);
       socket.off('message:deleted', handleMessageDeleted);
+      socket.off('message:read-receipt', handleReadReceipt);
+      socket.off('message:conversation-read', handleConversationRead);
     };
   }, [socket, isConnected]);
 
@@ -246,8 +273,88 @@ export function useMessages() {
     }
   }, [socket, isConnected]);
 
+  // Mesajı okundu olarak işaretle
+  const markAsRead = useCallback(async (messageId, userId) => {
+    if (!socket || !isConnected) {
+      // Fallback: HTTP API kullan
+      try {
+        const response = await fetch(`${API_BASE_URL}/${messageId}/read`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${TOKEN()}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ user_id: userId }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === messageId ? { ...m, is_read: true, read_at: new Date().toISOString() } : m
+            )
+          );
+          return true;
+        }
+        return false;
+      } catch (err) {
+        console.error('Mesaj okundu işaretleme hatası:', err);
+        return false;
+      }
+    }
+
+    return new Promise((resolve) => {
+      socket.emit('message:read', {
+        message_id: messageId,
+        user_id: userId,
+      }, (response) => {
+        if (response.success && response.data) {
+          const updatedMessage = response.data.message;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === messageId
+                ? { ...m, is_read: true, read_at: updatedMessage.read_at }
+                : m
+            )
+          );
+          resolve(true);
+        } else {
+          resolve(false);
+        }
+      });
+    });
+  }, [socket, isConnected]);
+
+  // Konuşmayı okundu olarak işaretle
+  const markConversationAsRead = useCallback(async (senderId, receiverId) => {
+    if (!socket || !isConnected) {
+      return false;
+    }
+
+    return new Promise((resolve) => {
+      socket.emit('message:read-conversation', {
+        sender_id: senderId,
+        receiver_id: receiverId,
+      }, (response) => {
+        if (response.success) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.sender_id === senderId && m.receiver_id === receiverId && !m.is_read
+                ? { ...m, is_read: true, read_at: new Date().toISOString() }
+                : m
+            )
+          );
+          resolve(true);
+        } else {
+          resolve(false);
+        }
+      });
+    });
+  }, [socket, isConnected]);
+
   return {
     messages,
+    setMessages,
     loading,
     error,
     message,
@@ -255,6 +362,8 @@ export function useMessages() {
     loadConversation,
     sendMessage,
     deleteMessage,
+    markAsRead,
+    markConversationAsRead,
   };
 }
 

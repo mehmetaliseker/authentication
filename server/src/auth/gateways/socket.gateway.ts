@@ -254,5 +254,74 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return { error: error.message || 'Mesaj silinemedi' };
     }
   }
+
+  @SubscribeMessage('message:read')
+  async handleReadMessage(
+    @MessageBody() data: { message_id: number; user_id: number },
+    @ConnectedSocket() client: AuthenticatedSocket,
+  ) {
+    if (!client.userId || client.userId !== data.user_id) {
+      return { error: 'Yetkisiz erişim' };
+    }
+
+    try {
+      const message = await this.messageRepository.findById(data.message_id);
+      if (!message) {
+        return { error: 'Mesaj bulunamadı' };
+      }
+
+      if (message.receiver_id !== data.user_id) {
+        return { error: 'Bu mesajı okundu olarak işaretleme yetkiniz yok' };
+      }
+
+      if (message.is_read) {
+        // Zaten okunmuş, güncellenmiş mesajı döndür
+        return { success: true, data: { message: message } };
+      }
+
+      const updatedMessage = await this.messageRepository.markAsRead(data.message_id, data.user_id);
+      
+      if (updatedMessage) {
+        // Gönderen kullanıcıya read receipt bildirimi gönder
+        const senderSocketId = this.connectedUsers.get(message.sender_id);
+        if (senderSocketId) {
+          this.server.to(`user:${message.sender_id}`).emit('message:read-receipt', {
+            message_id: data.message_id,
+            read_at: updatedMessage.read_at,
+          });
+        }
+      }
+
+      return { success: true, data: { message: updatedMessage } };
+    } catch (error) {
+      return { error: error.message || 'Mesaj okundu olarak işaretlenemedi' };
+    }
+  }
+
+  @SubscribeMessage('message:read-conversation')
+  async handleReadConversation(
+    @MessageBody() data: { sender_id: number; receiver_id: number },
+    @ConnectedSocket() client: AuthenticatedSocket,
+  ) {
+    if (!client.userId || client.userId !== data.receiver_id) {
+      return { error: 'Yetkisiz erişim' };
+    }
+
+    try {
+      await this.messageRepository.markConversationAsRead(data.sender_id, data.receiver_id);
+      
+      // Gönderen kullanıcıya tüm mesajların okunduğunu bildir
+      const senderSocketId = this.connectedUsers.get(data.sender_id);
+      if (senderSocketId) {
+        this.server.to(`user:${data.sender_id}`).emit('message:conversation-read', {
+          receiver_id: data.receiver_id,
+        });
+      }
+
+      return { success: true };
+    } catch (error) {
+      return { error: error.message || 'Konuşma okundu olarak işaretlenemedi' };
+    }
+  }
 }
 

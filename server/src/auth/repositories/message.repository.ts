@@ -62,8 +62,8 @@ export class MessageRepository {
   async markAsRead(messageId: number, userId: number): Promise<Message> {
     const query = `
       UPDATE messages 
-      SET is_read = true, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $1 AND receiver_id = $2
+      SET is_read = true, read_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1 AND receiver_id = $2 AND is_read = false
       RETURNING *
     `;
     const result = await this.databaseService.query(query, [messageId, userId]);
@@ -73,7 +73,7 @@ export class MessageRepository {
   async markConversationAsRead(senderId: number, receiverId: number): Promise<void> {
     const query = `
       UPDATE messages 
-      SET is_read = true, updated_at = CURRENT_TIMESTAMP
+      SET is_read = true, read_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
       WHERE sender_id = $1 AND receiver_id = $2 AND is_read = false
     `;
     await this.databaseService.query(query, [senderId, receiverId]);

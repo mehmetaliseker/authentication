@@ -16,3 +16,6 @@ WHERE last_active IS NULL;
 -- Kolon yorumu ekle
 COMMENT ON COLUMN public.users.last_active IS 'Kullanıcının son aktif olduğu zaman (mesaj gönderme, mesaj okuma, vb.)';
 
+
+
+
